@@ -25,8 +25,10 @@ from sklearn.cross_validation import train_test_split
 import lightgbm as lgb
 import argparse
 
-def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objective='binary', metrics='auc',
-                 feval=None, early_stopping_rounds=20, num_boost_round=3000, verbose_eval=10, categorical_features=None):
+def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', 
+                      objective='binary', metrics='auc', feval=None, 
+                      early_stopping_rounds=20, num_boost_round=3000, 
+                      verbose_eval=10, categorical_features=None):
     lgb_params = {
         'boosting_type': 'gbdt',
         'objective': objective,
@@ -53,20 +55,22 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', objec
 
     print("preparing validation datasets")
 
-    xgtrain = lgb.Dataset(dtrain[predictors].values, label=dtrain[target].values,
+    xgtrain = lgb.Dataset(dtrain[predictors].values, 
+                          label=dtrain[target].values,
                           feature_name=predictors,
-                          categorical_feature=categorical_features
-                          )
-    xgvalid = lgb.Dataset(dvalid[predictors].values, label=dvalid[target].values,
+                          categorical_feature=categorical_features)
+    xgvalid = lgb.Dataset(dvalid[predictors].values, 
+                          label=dvalid[target].values,
                           feature_name=predictors,
-                          categorical_feature=categorical_features
-                          )
+                          categorical_feature=categorical_features)
 
     evals_results = {}
 
-    bst1 = lgb.train(lgb_params, xgtrain, valid_sets=[xgtrain, xgvalid], valid_names=['train','valid'], evals_result=evals_results, num_boost_round=num_boost_round,
-                      early_stopping_rounds=early_stopping_rounds,
-                      verbose_eval=10, feval=feval)
+    bst1 = lgb.train(lgb_params, xgtrain, valid_sets=[xgtrain, xgvalid], 
+                     valid_names=['train','valid'], evals_result=evals_results, 
+                     num_boost_round=num_boost_round, 
+                     early_stopping_rounds=early_stopping_rounds, 
+                     verbose_eval=10, feval=feval)
 
     n_estimators = bst1.best_iteration
     print("\nModel Report")
@@ -93,9 +97,15 @@ def main(train_file, test_file, job_dir):
             }
 
     print('load train...')
-    train_df = pd.read_csv(train_file, dtype=dtypes, nrows=30000000, usecols=['ip','app','device','os', 'channel', 'click_time', 'is_attributed'])
+    train_df = pd.read_csv(train_file, dtype=dtypes, nrows=30000000, 
+                           usecols=['ip','app','device','os', 'channel', 
+                                    'click_time', 'is_attributed'])
     print('load test...')
-    test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip','app','device','os', 'channel', 'click_time', 'click_id'])
+    test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip', 'app',
+                                                            'device', 'os', 
+                                                            'channel', 
+                                                            'click_time', 
+                                                            'click_id'])
 
     import gc
 
@@ -109,7 +119,6 @@ def main(train_file, test_file, job_dir):
     train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('uint8')
     del train_df['click_time']
     gc.collect()
-
 
     train_df.info()
 
@@ -143,8 +152,12 @@ def main(train_file, test_file, job_dir):
         'min_child_weight': 0,  # Minimum sum of instance weight(hessian) needed in a child(leaf)
         'scale_pos_weight':80
     }
-    bst = lgb_modelfit_nocv(params, train_df, val_df, predictors, target, objective='binary', metrics='auc',
-                            early_stopping_rounds=40, verbose_eval=True, num_boost_round=500, categorical_features=categorical)
+    
+    bst = lgb_modelfit_nocv(params, train_df, val_df, predictors, target, 
+                            objective='binary', metrics='auc', 
+                            early_stopping_rounds=40, verbose_eval=True, 
+                            num_boost_round=500, 
+                            categorical_features=categorical)
 
     del train_df
     del val_df
@@ -156,6 +169,7 @@ def main(train_file, test_file, job_dir):
     sub.to_csv('result/lgb_sub_tint.csv',index=False)
     print("done...")
     print(sub.info())
+    
     
 if __name__ == '__main__':
     """
@@ -186,4 +200,3 @@ if __name__ == '__main__':
     print('args: {}'.format(arguments))
 
     main(args.train_file, args.test_file, args.job_dir)
-
