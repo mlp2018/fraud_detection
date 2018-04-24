@@ -166,7 +166,7 @@ def main(train_file, test_file, job_dir):
     print("Predicting...")
     sub['is_attributed'] = bst.predict(test_df[predictors])
     print("writing...")
-    sub.to_csv('result/lgb_sub_tint.csv',index=False)
+    sub.to_csv('trainer/result/lgb_sub_tint.csv',index=False)
     print("done...")
     print(sub.info())
     
