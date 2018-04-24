@@ -24,6 +24,9 @@ import numpy as np
 from sklearn.cross_validation import train_test_split
 import lightgbm as lgb
 import argparse
+import gc
+
+from trainer import preprocessing as pp
 
 def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', 
                       objective='binary', metrics='auc', feval=None, 
@@ -83,61 +86,12 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target',
     return bst1
 
 def main(train_file, test_file, job_dir):
+
+    train_df, val_df, test_df = pp.run(train_file, test_file)
     
-    path = 'data/'
-
-    dtypes = {
-            'ip'            : 'uint32',
-            'app'           : 'uint16',
-            'device'        : 'uint16',
-            'os'            : 'uint16',
-            'channel'       : 'uint16',
-            'is_attributed' : 'uint8',
-            'click_id'      : 'uint32'
-            }
-
-    print('load train...')
-    train_df = pd.read_csv(train_file, dtype=dtypes, nrows=30000000, 
-                           usecols=['ip','app','device','os', 'channel', 
-                                    'click_time', 'is_attributed'])
-    print('load test...')
-    test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip', 'app',
-                                                            'device', 'os', 
-                                                            'channel', 
-                                                            'click_time', 
-                                                            'click_id'])
-
-    import gc
-
-    len_train = len(train_df)
-    train_df=train_df.append(test_df)
-
-    del test_df
-    gc.collect()
-
-    print('data prep...')
-    train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('uint8')
-    del train_df['click_time']
-    gc.collect()
-
-    train_df.info()
-
-    test_df = train_df[len_train:]
-    print(len(test_df))
-    val_df = train_df[(len_train-2000000):len_train]
-    print(len(val_df))
-    train_df = train_df[:(len_train-2000000)]
-    print(len(train_df))
-
     target = 'is_attributed'
     predictors = ['app','device','os', 'channel', 'hour']
     categorical = ['app','device','os', 'channel', 'hour']
-
-
-    sub = pd.DataFrame()
-    sub['click_id'] = test_df['click_id'].astype('int')
-
-    gc.collect()
 
     print("Training...")
     params = {
@@ -200,3 +154,4 @@ if __name__ == '__main__':
     print('args: {}'.format(arguments))
 
     main(args.train_file, args.test_file, args.job_dir)
+    
