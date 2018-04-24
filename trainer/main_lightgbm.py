@@ -1,8 +1,3 @@
-################################################################################
-#  This script provides a general outline of how you can train a model on GCP  #
-#  Authors: Mick van Hulst, Dennis Verheijden                                  #
-################################################################################
-
 # Copyright 2018 Aloisio Dourado
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
