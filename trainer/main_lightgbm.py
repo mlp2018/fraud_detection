@@ -78,10 +78,10 @@ def lgb_modelfit(dtrain, dvalid, predictors, target='target',
     bst1 = gbm.fit(dtrain[predictors], dtrain[target], eval_set=[(dvalid[predictors], dvalid[target])],
                    eval_metric=metrics, early_stopping_rounds=early_stopping_rounds)
 
-    n_estimators = bst1.best_iteration
+    n_estimators = bst1.best_iteration_
     print("\nModel Report")
     print("n_estimators : ", n_estimators)
-    print(metrics+":", evals_results['valid'][metrics][n_estimators-1])
+    print(metrics+":", bst1.best_score_)
 
     #ax = lgb.plot_importance(bst1,max_num_features=60)
     #plt.show()
@@ -100,18 +100,6 @@ def main(train_file, test_file, job_dir):
     categorical = ['app','device','os', 'channel', 'hour']
 
     print("Training...")
-    params = {
-        'learning_rate': 0.2,
-        'num_leaves': 1400,  # we should let it be smaller than 2^(max_depth)
-        'max_depth': 3,  # -1 means no limit
-        'min_child_samples': 100,  # Minimum number of data need in a child(min_data_in_leaf)
-        'max_bin': 100,  # Number of bucketed bin for feature values
-        'subsample': .8,  # Subsample ratio of the training instance.
-        'subsample_freq': 1,  # frequence of subsample, <=0 means no enable
-        'colsample_bytree': 0.9,  # Subsample ratio of columns when constructing each tree.
-        'min_child_weight': 0,  # Minimum sum of instance weight(hessian) needed in a child(leaf)
-        'scale_pos_weight':80
-    }
     
     bst = lgb_modelfit(train_df, val_df, predictors, target,
                             objective='binary', metrics='auc',
