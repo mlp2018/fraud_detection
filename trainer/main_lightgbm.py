@@ -83,6 +83,9 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target',
 def main(train_file, test_file, job_dir):
 
     train_df, val_df, test_df = pp.run(train_file, test_file)
+
+    sub = pd.DataFrame()
+    sub['click_id'] = test_df['click_id'].astype('int')
     
     target = 'is_attributed'
     predictors = ['app','device','os', 'channel', 'hour']
