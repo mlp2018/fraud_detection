@@ -45,9 +45,6 @@ def run(train_file, test_file):
     print(len(train_df))
 
 
-    sub = pd.DataFrame()
-    sub['click_id'] = test_df['click_id'].astype('int')
-
     gc.collect()
     
     return train_df, val_df, test_df
