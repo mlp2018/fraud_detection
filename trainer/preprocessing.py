@@ -14,7 +14,7 @@ def run(train_file, test_file):
             }
 
     print('Load train data...')
-    train_df = pd.read_csv(train_file, dtype=dtypes, nrows=30000000, 
+    train_df = pd.read_csv(train_file, dtype=dtypes,
                            usecols=['ip','app','device','os', 'channel', 
                                     'click_time', 'is_attributed'])
     print('Load test data...')
@@ -39,9 +39,9 @@ def run(train_file, test_file):
 
     test_df = train_df[len_train:]
     print(len(test_df))
-    val_df = train_df[(len_train-2000000):len_train]
+    val_df = train_df[(len_train-2000):len_train]
     print(len(val_df))
-    train_df = train_df[:(len_train-2000000)]
+    train_df = train_df[:(len_train-2000)]
     print(len(train_df))
 
 
