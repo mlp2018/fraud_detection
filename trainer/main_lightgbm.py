@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import pandas as pd
-import time
-import numpy as np
-from sklearn.cross_validation import train_test_split
-import lightgbm as lgb
 import argparse
 import gc
+import time
 
-from trainer import preprocessing as pp
+import lightgbm as lgb
+import numpy as np
+import pandas as pd
+from sklearn.cross_validation import train_test_split
+
+import preprocessing as pp
 
 def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', 
                       objective='binary', metrics='auc', feval=None, 
@@ -51,7 +51,7 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target',
 
     lgb_params.update(params)
 
-    print("preparing validation datasets")
+    print("Preparing validation datasets...")
 
     xgtrain = lgb.Dataset(dtrain[predictors].values, 
                           label=dtrain[target].values,
@@ -114,19 +114,16 @@ def main(train_file, test_file, job_dir):
 
     print("Predicting...")
     sub['is_attributed'] = bst.predict(test_df[predictors])
-    print("writing...")
+    print("Writing...")
     sub.to_csv('trainer/result/lgb_sub_tint.csv',index=False)
-    print("done...")
+    print("Done...")
     print(sub.info())
     
     
 if __name__ == '__main__':
-    """
-    The argparser can also be extended to take --n-epochs or --batch-size arguments
-    """
     parser = argparse.ArgumentParser()
     
-    # Input Arguments
+    # Input arguments
     parser.add_argument(
       '--train-file',
       help='GCS or local paths to training data',
@@ -144,6 +141,7 @@ if __name__ == '__main__':
         help='GCS location to write checkpoints and export models',
         required=True
     )
+    
     args = parser.parse_args()
     arguments = args.__dict__
     print('args: {}'.format(arguments))
