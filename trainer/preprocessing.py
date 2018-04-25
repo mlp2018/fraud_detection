@@ -13,11 +13,11 @@ def run(train_file, test_file):
             'click_id'      : 'uint32'
             }
 
-    print('load train...')
+    print('Load train data...')
     train_df = pd.read_csv(train_file, dtype=dtypes, nrows=30000000, 
                            usecols=['ip','app','device','os', 'channel', 
                                     'click_time', 'is_attributed'])
-    print('load test...')
+    print('Load test data...')
     test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip', 'app',
                                                             'device', 'os', 
                                                             'channel', 
@@ -30,7 +30,7 @@ def run(train_file, test_file):
     del test_df
     gc.collect()
 
-    print('data prep...')
+    print('Preprocessing the data...')
     train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('uint8')
     del train_df['click_time']
     gc.collect()
