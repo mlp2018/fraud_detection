@@ -23,7 +23,7 @@ from sklearn.cross_validation import train_test_split
 
 import preprocessing as pp
 
-def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target', 
+def lgb_modelfit(params, dtrain, dvalid, predictors, target='target',
                       objective='binary', metrics='auc', feval=None, 
                       early_stopping_rounds=20, num_boost_round=3000, 
                       verbose_eval=10, categorical_features=None):
@@ -56,13 +56,28 @@ def lgb_modelfit_nocv(params, dtrain, dvalid, predictors, target='target',
     xgtrain = lgb.Dataset(dtrain[predictors].values, 
                           label=dtrain[target].values,
                           feature_name=predictors,
-                          categorical_feature=categorical_features)
+                          categorical_feature=categorical_features,
+                          free_raw_data=False)
     xgvalid = lgb.Dataset(dvalid[predictors].values, 
                           label=dvalid[target].values,
                           feature_name=predictors,
                           categorical_feature=categorical_features)
 
     evals_results = {}
+
+    # Optimization should loop around this line lightgbm.cv
+    bst = lgb.cv(lgb_params, xgtrain, num_boost_round=num_boost_round, folds=None, nfold=5, stratified=True,
+                      shuffle=True,
+                      metrics=metrics, fobj=None, feval=None, init_model=None, feature_name=predictors,
+                      categorical_feature=categorical_features,
+                      early_stopping_rounds=early_stopping_rounds, fpreproc=None, verbose_eval=10, show_stdv=True,
+                      seed=7, callbacks=None)
+
+    # then optimal parameters should be chosen here based on mean auc over folds
+    array = np.array(bst["auc-mean"], dtype=float)
+    array.mean()
+    # and then model retrained with those on full training set.
+    # (eventually we will replace the xgtrain and xgvalid split by our own 90-10 split)
 
     bst1 = lgb.train(lgb_params, xgtrain, valid_sets=[xgtrain, xgvalid], 
                      valid_names=['train','valid'], evals_result=evals_results, 
@@ -105,7 +120,7 @@ def main(train_file, test_file, job_dir):
         'scale_pos_weight':80
     }
     
-    bst = lgb_modelfit_nocv(params, train_df, val_df, predictors, target, 
+    bst = lgb_modelfit(params, train_df, val_df, predictors, target,
                             objective='binary', metrics='auc', 
                             early_stopping_rounds=40, verbose_eval=True, 
                             num_boost_round=500, 
