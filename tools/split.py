@@ -16,17 +16,17 @@
 
 
 from __future__ import absolute_import, division, print_function
-from builtins import (ascii, bytes, chr, dict, filter, hex, input,
+from builtins import (bytes, chr, dict, filter, hex, input,
                       int, map, next, oct, open, pow, range, round,
                       str, super, zip)
 from argparse import ArgumentParser
-import sklearn
 import pandas as pd
+import sklearn
+import warnings
 
 
 def _get_sklearn_version():
-    (release, major, minor) = sklearn.__version__.split('.')
-    return int(release), int(major), int(minor)
+    return tuple(map(int, sklearn.__version__.split('.')))
 
 
 def make_cmd_args_parser():
@@ -48,19 +48,29 @@ def make_cmd_args_parser():
 
 
 def split(x, y, alpha, seed):
-    if _get_sklearn_version() >= (0, 19, 0):
-        from sklearn.model_selection import StratifiedShuffleSplit
-        return next(iter(StratifiedShuffleSplit(
-            n_splits=1, test_size=alpha,
-            random_state=seed).split(x, y)))
-    else:  # We have an old version of sklearn...
-        from sklearn.cross_validation import StratifiedShuffleSplit
-        return next(iter(StratifiedShuffleSplit(
-            y, n_iter=1, test_size=alpha,
-            random_state=seed)))
+    n_splits = round(1.0 / alpha)
+    if abs(n_splits - 1.0 / alpha) / n_splits >= 1.E-4:
+        warnings.warn('Invalid alpha={} given, using alpha=1/{} instead.'
+                     .format(alpha, n_splits), RuntimeWarning)
+    sk_version = _get_sklearn_version()
+    if sk_version >= (0, 19):
+        from sklearn.model_selection import StratifiedKFold
+        return next(iter(StratifiedKFold(
+            n_splits=n_splits, shuffle=False, random_state=seed).split(x, y)))
+    elif sk_version >= (0, 14) and sk_version < (0, 15):
+        # TODO: I know this works for 0.14.1, but perhaps it also works for
+        # some newer versions...
+        from sklearn.cross_validation import StratifiedKFold
+        # sklearn uses numpy's random number generator under the hood, so to
+        # get deterministic behavior we have to re-seed it.
+        import numpy
+        import numpy.random
+        numpy.random.seed(seed)  
+        return next(iter(StratifiedKFold(y, n_folds=n_splits, indices=True)))
 
 
 def main():
+    # warnings.simplefilter('always') 
     args = make_cmd_args_parser().parse_args()
     whole_dataset = pd.read_csv(args.input_file)
     train_indices, test_indices = split(
