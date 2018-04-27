@@ -15,23 +15,53 @@
 
 import pandas as pd
 import gc
+import logging
+
+
+DTYPES = {
+    'ip'            : 'uint32',
+    'app'           : 'uint16',
+    'device'        : 'uint16',
+    'os'            : 'uint16',
+    'channel'       : 'uint16',
+    'is_attributed' : 'uint8',
+    'click_id'      : 'uint32',
+}
+
+
+def _preprocess_common(data_frame):
+    logging.info('Replacing `click_time` by `hour`...')
+    data_frame['hour'] = pd.to_datetime(
+        data_frame['click_time']).dt.hour.astype('uint8')
+    del data_frame['click_time']
+    gc.collect()
+    return data_frame
+
+
+def load_train_raw(filename):
+    columns = ['ip','app','device','os', 'channel', 'click_time',
+               'is_attributed']
+    logging.info('Loading labeled data from {!r}...'.format(filename))
+    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+
+
+def load_test_raw(filename):
+    columns = ['ip','app','device','os', 'channel', 'click_time',
+               'click_id']
+    logging.info('Loading unlabeled data from {!r}...'.format(filename))
+    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+
+
+def load_train(filename):
+    return _preprocess_common(load_train_raw(filename))
+
+
+def load_test(filename):
+    return _preprocess_common(load_test_raw(filename))
+
 
 def run(train_file, test_file):
-    
-    dtypes = {
-            'ip'            : 'uint32',
-            'app'           : 'uint16',
-            'device'        : 'uint16',
-            'os'            : 'uint16',
-            'channel'       : 'uint16',
-            'is_attributed' : 'uint8',
-            'click_id'      : 'uint32'
-            }
 
-    print('Load train data...')
-    train_df = pd.read_csv(train_file, dtype=dtypes,
-                           usecols=['ip','app','device','os', 'channel', 
-                                    'click_time', 'is_attributed'])
     print('Load test data...')
     test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip', 'app',
                                                             'device', 'os', 
