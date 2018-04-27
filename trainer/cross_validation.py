@@ -54,3 +54,8 @@ def stratified_kfold(n_splits=3, seed=None):
                 
         return _StratifiedKFold(n_splits, random_state=seed)
 
+
+def cross_val_score(*args, **kwargs):
+    from sklearn.model_selection import cross_val_score
+    return cross_val_score(*args, **kwargs)
+

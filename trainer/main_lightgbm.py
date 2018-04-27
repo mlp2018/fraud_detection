@@ -31,7 +31,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
-from cross_validation import stratified_kfold
+from cross_validation import stratified_kfold, cross_val_score
 import preprocessing as pp
 
 
