@@ -13,9 +13,9 @@
 # limitations under the License.
 
 
-import pandas as pd
 import gc
 import logging
+import pandas as pd
 
 
 DTYPES = {
@@ -30,6 +30,9 @@ DTYPES = {
 
 
 def _preprocess_common(data_frame):
+    """
+    Data transformations that should be done to both training and test data.
+    """
     logging.info('Replacing `click_time` by `hour`...')
     data_frame['hour'] = pd.to_datetime(
         data_frame['click_time']).dt.hour.astype('uint8')
@@ -53,43 +56,17 @@ def load_test_raw(filename):
 
 
 def load_train(filename):
+    """
+    Reads and preprocesses labeled data from `filename`. This method should be
+    called for both training and validation data.
+    """
     return _preprocess_common(load_train_raw(filename))
 
 
 def load_test(filename):
+    """
+    Reads and preprocesses unlabeled data from `filename`. This method should be
+    called for test data preprocessing.
+    """
     return _preprocess_common(load_test_raw(filename))
 
-
-def run(train_file, test_file):
-
-    print('Load test data...')
-    test_df = pd.read_csv(test_file, dtype=dtypes, usecols=['ip', 'app',
-                                                            'device', 'os', 
-                                                            'channel', 
-                                                            'click_time', 
-                                                            'click_id'])
-
-    len_train = len(train_df)
-    train_df=train_df.append(test_df)
-
-    del test_df
-    gc.collect()
-
-    print('Preprocessing the data...')
-    train_df['hour'] = pd.to_datetime(train_df.click_time).dt.hour.astype('uint8')
-    del train_df['click_time']
-    gc.collect()
-
-    train_df.info()
-
-    test_df = train_df[len_train:]
-    print(len(test_df))
-    val_df = train_df[(len_train-2000):len_train]
-    print(len(val_df))
-    train_df = train_df[:(len_train-2000)]
-    print(len(train_df))
-
-
-    gc.collect()
-    
-    return train_df, val_df, test_df
