@@ -1,4 +1,6 @@
 # Copyright 2018 Aloisio Dourado
+# Copyright 2018 Sophie Arana
+# Copyright 2018 Tom Westerhout
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,10 +30,9 @@ import warnings
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-from .cross_validation import stratified_kfold
-import .preprocessing as pp
+from cross_validation import stratified_kfold
+import preprocessing as pp
 
 
 # Some default parameters
