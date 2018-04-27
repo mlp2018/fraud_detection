@@ -24,27 +24,33 @@ def _get_sklearn_version():
     return tuple(map(int, sklearn.__version__.split('.')))
 
 
-def stratified_kfold(x, y, n_splits=3, seed=None):
+def stratified_kfold(n_splits=3, seed=None):
     """
-    Returns 
-    `StratifiedKFold(n_splits, shuffle=False, random_state=seed).split(x, y)`
-    in a way compatible with older sklearn versions.
+    Returns `StratifiedKFold(n_splits, shuffle=False, random_state=seed)` in a
+    way that is compatible with older sklearn versions.
 
-    Please, use this method to calling `StratifiedKFold` directly.
+    Please, prefer this method to calling `StratifiedKFold` directly.
     """
     sk_version = _get_sklearn_version()
     if sk_version >= (0, 19):
         from sklearn.model_selection import StratifiedKFold
         return StratifiedKFold(
-            n_splits=n_splits, shuffle=False, random_state=seed).split(x, y)
+            n_splits=n_splits, shuffle=False, random_state=seed)
     elif sk_version >= (0, 14) and sk_version < (0, 15):
         # TODO: I know this works for 0.14.1, but perhaps it also works for
         # some newer versions...
         from sklearn.cross_validation import StratifiedKFold
         # sklearn uses numpy's random number generator under the hood, so to
         # get deterministic behavior we have to re-seed it.
-        import numpy
         import numpy.random
-        numpy.random.seed(seed)  
-        return StratifiedKFold(y, n_folds=n_splits, indices=True)
+        class _StratifiedKFold(StratifiedKFold):
+            def __init__(self, n_splits, random_state=None):
+                self.n_splits = n_splits
+                if random_state is not None:
+                    numpy.random.seed(seed)
+            def split(self, x, y):
+                super().__init__(y, n_folds=self.n_splits, indices=True)
+                return self
+                
+        return _StratifiedKFold(n_splits, random_state=seed)
 
