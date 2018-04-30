@@ -15,6 +15,8 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
+from builtins import (int, super)
+
 import argparse
 import json
 import logging
@@ -144,12 +146,9 @@ def main():
     logging.info('Preprocessing...')
     
     # Load training data set, i.e. "the 90%"
-    #train_file = "C:/Users/johan/Documents/GitHub/fraud_detection/trainer/data/train_sample.csv"
-    #train_df = pp.load_train(train_file)
     train_df = pp.load_train(args.train_file)
     
     # Load validation data set, i.e. "the 10%"
-    #valid_df = None
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
     
@@ -168,14 +167,11 @@ def main():
                                  validation_data=valid_df)
     
     # Write best parameters to file
-    print(best_params)
-    #job_dir = "C:/Users/johan/Documents/GitHub/fraud_detection/trainer/results"
     output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
-    #output_file = path.join(job_dir, 'optimal_lgbm_param_values.txt')
        
     with open(output_file, "w") as param_file:
         json.dump(best_params, param_file)
-
+        
 
 # Run code    
 if __name__ == '__main__':

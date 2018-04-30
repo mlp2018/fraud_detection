@@ -58,28 +58,6 @@ LGBM_PARAMS = {
     'verbose':            0,
 }
 
-LGBM_PARAM_GRID = {
-    'boosting_type':      ['gbdt'],
-    'objective':          ['binary'],
-    'metric':             ['auc'],
-    'learning_rate':      [0.05, 0.08], # NB: Use 'range' or something similar
-    'num_leaves':         [30, 31],  # we should let it be smaller than 2^(max_depth)
-    'max_depth':          [-1],  # -1 means no limit
-    'min_child_samples':  [20],  # Minimum number of data need in a child(min_data_in_leaf)
-    'max_bin':            [255],  # Number of bucketed bin for feature values
-    'subsample':          [0.6],  # Subsample ratio of the training instance.
-    'subsample_freq':     [0],  # frequence of subsample, <=0 means no enable
-    'colsample_bytree':   [0.3],  # Subsample ratio of columns when constructing each tree.
-    'min_child_weight':   [5],  # Minimum sum of instance weight(hessian) needed in a child(leaf)
-    'subsample_for_bin':  [200000],  # Number of samples for constructing bin
-    'min_split_gain':     [0],  # lambda_l1, lambda_l2 and min_gain_to_split to regularization
-    'reg_alpha':          [0],  # L1 regularization term on weights
-    'reg_lambda':         [0],  # L2 regularization term on weights
-    'nthread':            [8],
-    #'verbose':            [0],
-}
-
-
 
 def lgb_cv(params, training_data, predictors, target, validation_data=None, 
            categorical_features=None, n_splits=2, early_stopping_rounds=20):
@@ -88,7 +66,8 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
     `training_data` with `n_splits` splits. At each iteration, LightDBM
     algorithm with `params` is used for making predictions.
     """
-    # Loads default parameters and then updates them using provided parameters.
+    
+    # Load default parameters and update them using provided parameters
     lgb_params = deepcopy(LGBM_PARAMS)
     lgb_params.update(params)
     gbm = lgb.LGBMRegressor(**lgb_params)
@@ -253,10 +232,6 @@ def main():
                    categorical_features=categorical, n_splits=2,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
-    best_params = lgb_gridsearch(LGBM_PARAM_GRID, train_df, predictors, target,
-                   categorical_features=categorical, n_splits=2,
-                   validation_data=valid_df)
-
     logging.info('Training on all data...')
     gbm = lgb_train(params, train_df, predictors, target,
                     categorical_features=categorical,
