@@ -15,12 +15,10 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
-from builtins import (int, super)
-
 import argparse
+from builtins import int, super
 import json
 import logging
-import os
 from os import path
 
 import lightgbm as lgb

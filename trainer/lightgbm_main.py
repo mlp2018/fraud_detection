@@ -15,20 +15,14 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
-from builtins import (bytes, chr, dict, filter, hex, input,
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
 import argparse
+from builtins import int, super
 from copy import deepcopy
-import gc
 import logging
 import os
 from os import path
-import time
-import warnings
 
 import lightgbm as lgb
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
 
