@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, division, print_function
 from copy import deepcopy
+import json
 import logging
 import os
 from os import path
@@ -150,35 +151,48 @@ def main():
     # Columns our predictions are based on
     predictors = ['app', 'device', 'os', 'channel', 'hour']
     categorical = ['app', 'device', 'os', 'channel', 'hour']
-    params = {
-        'learning_rate':     0.2,
-        'num_leaves':        1400,  # we should let it be smaller than 2^(max_depth)
-        'max_depth':         3,  # -1 means no limit
-        'min_child_samples': 100,  # Minimum number of data need in a child(min_data_in_leaf)
-        'max_bin':           100,  # Number of bucketed bin for feature values
-        'subsample':         0.8,  # Subsample ratio of the training instance.
-        'subsample_freq':    1,  # frequence of subsample, <=0 means no enable
-        'colsample_bytree':  0.9,  # Subsample ratio of columns when constructing each tree.
-        'min_child_weight':  0,  # Minimum sum of instance weight(hessian) needed in a child(leaf)
-        'scale_pos_weight':  80
-    }
-
+    
+    # Check of optimal parameter values have been established
+    optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
+    
+    if os.path.isfile(optim_file):
+        with open(optim_file, "r") as optim_file:
+            optim_values = json.load(optim_file)
+        
+        # Replace default values
+        logging.info('Replacing default parameter values with optimized \
+ones...')
+        lgb_params = deepcopy(LGBM_PARAMS)
+        lgb_params.update(optim_values)
+        
+    else:
+        logging.info('No optimized parameter values found, so using the \
+default ones...')
+    
+    # Run cross-validation
     logging.info('Cross-validation part...')
-    score = lgb_cv(params, train_df, predictors, target,
+    score = lgb_cv(lgb_params, train_df, predictors, target,
                    categorical_features=categorical, n_splits=2,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
+    
+    # Train the final model on all data
     logging.info('Training on all data...')
-    gbm = lgb_train(params, train_df, predictors, target,
+    gbm = lgb_train(lgb_params, train_df, predictors, target,
                     categorical_features=categorical,
                     validation_data=valid_df)
+    
+    # Check if job-dir exists, and if not, create it
     if not path.exists(args.job_dir) \
        and path.exists(path.dirname(path.abspath(args.job_dir))):
         os.mkdir(args.job_dir)
+        
+    # save model to file
     model_file = path.join(args.job_dir, 'model.txt')
     logging.info('Saving trained model to {!r}...'.format(model_file))
     gbm.booster_.save_model(model_file)
 
+    # Make predictions and save to file
     if test_df is not None:
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[predictors])
