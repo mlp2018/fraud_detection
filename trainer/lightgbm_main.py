@@ -87,54 +87,6 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
     return scores.mean()
 
 
-def lgb_gridsearch(param_grid, training_data, predictors, target, 
-                   validation_data=None, categorical_features=None, n_splits=2, 
-                   early_stopping_rounds=20):
-    """
-    Performs a grid search to find the optimal value for all parameters.
-    The grid search makes use of k-fold cross-validation.
-    Returns a dictionary with the optimal value for all parameters."
-
-    """
-    
-    # Instantiate classification model.
-    gbm = lgb.LGBMRegressor(**param_grid)
-    
-    # Dictionary with additional parameters to pass to .fit method.
-    fit_params = {
-        'feature_name': predictors,
-        'categorical_feature': categorical_features,
-        # 'callbacks': [lgb.print_evaluation(period=10)]
-    }
-
-    # If we're given some validation data, we can use it for early stopping.    
-    if validation_data is not None:
-
-        fit_params['eval_set'] = [(validation_data[predictors].values,
-                                   validation_data[target].values)]
-        fit_params['early_stopping_rounds'] = early_stopping_rounds
-        fit_params['eval_metric'] = 'auc'
-    
-    # Instantiate the grid.
-    grid = GridSearchCV(estimator=gbm, param_grid=lgb_params, cv=n_splits, 
-                        scoring='roc_auc', n_jobs=1, verbose=1)
-    
-    # Fit the grid with data.
-    logging.info('Running the grid search...')
-    grid.fit(training_data[predictors].values, training_data[target].values)
-    
-    # Examine the results
-    scores = grid.cv_results_['mean_test_score']
-    best_score = grid.best_score_
-    best_params = grid.best_params_
-    logging.info('The best score from the grid search was: {}'
-                 .format(best_score))
-    logging.info('It was obtained with the following parameters: {}'
-                 .format(best_params))
-    
-    return best_params
-
-
 def lgb_train(params, training_data, predictors, target,
               validation_data=None, categorical_features=None,
               early_stopping_rounds=20):
