@@ -58,9 +58,8 @@ LGBM_PARAMS = {
 }
 
 
-def lgb_cv(params, training_data, predictors, target,
-           validation_data=None, categorical_features=None,
-           n_splits=2, early_stopping_rounds=20):
+def lgb_cv(params, training_data, predictors, target, validation_data=None, 
+           categorical_features=None, n_splits=2, early_stopping_rounds=20):
     """
     Returns the average score after performing cross validation on
     `training_data` with `n_splits` splits. At each iteration, LightDBM
@@ -164,8 +163,8 @@ def main():
     # Column we're trying to predict
     target = 'is_attributed'
     # Columns our predictions are based on.
-    predictors = ['app','device','os', 'channel', 'hour']
-    categorical = ['app','device','os', 'channel', 'hour']
+    predictors = ['app', 'device', 'os', 'channel', 'hour']
+    categorical = ['app', 'device', 'os', 'channel', 'hour']
     params = {
         'learning_rate':     0.2,
         'num_leaves':        1400,  # we should let it be smaller than 2^(max_depth)
@@ -193,13 +192,13 @@ def main():
        and path.exists(path.dirname(path.abspath(args.job_dir))):
         os.mkdir(args.job_dir)
     model_file = path.join(args.job_dir, 'model.txt')
-    logging.info('Saving trained model to {!r}'.format(model_file))
+    logging.info('Saving trained model to {!r}...'.format(model_file))
     gbm.booster_.save_model(model_file)
 
     if test_df is not None:
         logging.info('Making predictions ...')
-        predictions = gbm.predict(test_df)
-        predictions_file = path.join(args.job_dir, 'model.txt')
+        predictions = gbm.predict(test_df[predictors])
+        predictions_file = path.join(args.job_dir, 'predictions.txt')
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
                       predictions}).to_csv(predictions_file)
     
