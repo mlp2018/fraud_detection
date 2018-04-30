@@ -1,5 +1,6 @@
 # Copyright 2018 Aloisio Dourado
 # Copyright 2018 Sophie Arana
+# Copyright 2018 Johanna de Vos
 # Copyright 2018 Tom Westerhout
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
