@@ -40,7 +40,6 @@ def _preprocess_common(data_frame):
     gc.collect()
     return data_frame
 
-
 def load_train_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'is_attributed']
@@ -69,4 +68,3 @@ def load_test(filename):
     called for test data preprocessing.
     """
     return _preprocess_common(load_test_raw(filename))
-
