@@ -1,2 +1,4 @@
+/trainer/data
+/trainer/results
 /trainer/__pycache__
 /trainer/*.pyc
