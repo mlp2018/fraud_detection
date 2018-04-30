@@ -15,24 +15,15 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
-from builtins import (bytes, chr, dict, filter, hex, input,
-                      int, map, next, oct, open, pow, range, round,
-                      str, super, zip)
 import argparse
-from copy import deepcopy
-import gc
+import json
 import logging
 import os
 from os import path
-import time
-import warnings
 
 import lightgbm as lgb
-import numpy as np
-import pandas as pd
 from sklearn.model_selection import GridSearchCV
 
-from cross_validation import stratified_kfold, cross_val_score
 import preprocessing as pp
 
 
@@ -153,9 +144,12 @@ def main():
     logging.info('Preprocessing...')
     
     # Load training data set, i.e. "the 90%"
+    #train_file = "C:/Users/johan/Documents/GitHub/fraud_detection/trainer/data/train_sample.csv"
+    #train_df = pp.load_train(train_file)
     train_df = pp.load_train(args.train_file)
     
     # Load validation data set, i.e. "the 10%"
+    #valid_df = None
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
     
@@ -172,6 +166,16 @@ def main():
                                  predictors, target, 
                                  categorical_features=categorical, n_splits=2,
                                  validation_data=valid_df)
+    
+    # Write best parameters to file
+    print(best_params)
+    #job_dir = "C:/Users/johan/Documents/GitHub/fraud_detection/trainer/results"
+    output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
+    #output_file = path.join(job_dir, 'optimal_lgbm_param_values.txt')
+       
+    with open(output_file, "w") as param_file:
+        json.dump(best_params, param_file)
+
 
 # Run code    
 if __name__ == '__main__':
