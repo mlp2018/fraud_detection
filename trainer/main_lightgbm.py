@@ -30,6 +30,7 @@ import warnings
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import GridSearchCV
 
 from cross_validation import stratified_kfold, cross_val_score
 import preprocessing as pp
@@ -56,6 +57,28 @@ LGBM_PARAMS = {
     'nthread':            8,
     'verbose':            0,
 }
+
+LGBM_PARAM_GRID = {
+    'boosting_type':      ['gbdt'],
+    'objective':          ['binary'],
+    'metric':             ['auc'],
+    'learning_rate':      [0.05, 0.08], # NB: Use 'range' or something similar
+    'num_leaves':         [30, 31],  # we should let it be smaller than 2^(max_depth)
+    'max_depth':          [-1],  # -1 means no limit
+    'min_child_samples':  [20],  # Minimum number of data need in a child(min_data_in_leaf)
+    'max_bin':            [255],  # Number of bucketed bin for feature values
+    'subsample':          [0.6],  # Subsample ratio of the training instance.
+    'subsample_freq':     [0],  # frequence of subsample, <=0 means no enable
+    'colsample_bytree':   [0.3],  # Subsample ratio of columns when constructing each tree.
+    'min_child_weight':   [5],  # Minimum sum of instance weight(hessian) needed in a child(leaf)
+    'subsample_for_bin':  [200000],  # Number of samples for constructing bin
+    'min_split_gain':     [0],  # lambda_l1, lambda_l2 and min_gain_to_split to regularization
+    'reg_alpha':          [0],  # L1 regularization term on weights
+    'reg_lambda':         [0],  # L2 regularization term on weights
+    'nthread':            [8],
+    #'verbose':            [0],
+}
+
 
 
 def lgb_cv(params, training_data, predictors, target, validation_data=None, 
@@ -88,8 +111,55 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
                              training_data[target].values,
                              scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
                              fit_params=fit_params)
-    logging.info('Scores: {}'.format(scores))
     return scores.mean()
+
+
+def lgb_gridsearch(param_grid, training_data, predictors, target, 
+                   validation_data=None, categorical_features=None, n_splits=2, 
+                   early_stopping_rounds=20):
+    """
+    Performs a grid search to find the optimal value for all parameters.
+    The grid search makes use of k-fold cross-validation.
+    Returns a dictionary with the optimal value for all parameters."
+
+    """
+    
+    # Instantiate classification model.
+    gbm = lgb.LGBMRegressor(**param_grid)
+    
+    # Dictionary with additional parameters to pass to .fit method.
+    fit_params = {
+        'feature_name': predictors,
+        'categorical_feature': categorical_features,
+        # 'callbacks': [lgb.print_evaluation(period=10)]
+    }
+
+    # If we're given some validation data, we can use it for early stopping.    
+    if validation_data is not None:
+
+        fit_params['eval_set'] = [(validation_data[predictors].values,
+                                   validation_data[target].values)]
+        fit_params['early_stopping_rounds'] = early_stopping_rounds
+        fit_params['eval_metric'] = 'auc'
+    
+    # Instantiate the grid.
+    grid = GridSearchCV(estimator=gbm, param_grid=lgb_params, cv=n_splits, 
+                        scoring='roc_auc', n_jobs=1, verbose=1)
+    
+    # Fit the grid with data.
+    logging.info('Running the grid search...')
+    grid.fit(training_data[predictors].values, training_data[target].values)
+    
+    # Examine the results
+    scores = grid.cv_results_['mean_test_score']
+    best_score = grid.best_score_
+    best_params = grid.best_params_
+    logging.info('The best score from the grid search was: {}'
+                 .format(best_score))
+    logging.info('It was obtained with the following parameters: {}'
+                 .format(best_params))
+    
+    return best_params
 
 
 def lgb_train(params, training_data, predictors, target,
@@ -180,9 +250,12 @@ def main():
 
     logging.info('Cross-validation part...')
     score = lgb_cv(params, train_df, predictors, target,
-                   categorical_features=categorical, n_splits=5,
+                   categorical_features=categorical, n_splits=2,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
+    best_params = lgb_gridsearch(LGBM_PARAM_GRID, train_df, predictors, target,
+                   categorical_features=categorical, n_splits=2,
+                   validation_data=valid_df)
 
     logging.info('Training on all data...')
     gbm = lgb_train(params, train_df, predictors, target,
