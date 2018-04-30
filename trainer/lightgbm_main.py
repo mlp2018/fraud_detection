@@ -16,8 +16,6 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
-import argparse
-from builtins import int, super
 from copy import deepcopy
 import logging
 import os
@@ -28,10 +26,11 @@ import pandas as pd
 from sklearn.model_selection import GridSearchCV
 
 from cross_validation import stratified_kfold, cross_val_score
+import lightgbm_functions as lf
 import preprocessing as pp
 
 
-# Some default parameters
+# Default parameters
 LGBM_PARAMS = {
     'boosting_type':      'gbdt',
     'objective':          'binary',
@@ -65,100 +64,90 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
     # Load default parameters and update them using provided parameters
     lgb_params = deepcopy(LGBM_PARAMS)
     lgb_params.update(params)
+    
+    # Instantiate classification model with the default parameter values
     gbm = lgb.LGBMRegressor(**lgb_params)
+    
     # Dictionary with additional parameters to pass to .fit method.
     fit_params = {
         'feature_name': predictors,
         'categorical_feature': categorical_features,
         # 'callbacks': [lgb.print_evaluation(period=10)]
     }
+    
+    # If we're given some validation data, we can use it for early stopping    
     if validation_data is not None:
-        # If we're given some validation data, we can use it for early
-        # stopping.
         fit_params['eval_set'] = [(validation_data[predictors].values,
                                    validation_data[target].values)]
         fit_params['early_stopping_rounds'] = early_stopping_rounds
         fit_params['eval_metric'] = 'auc'
+
+    # Run k-fold cross-validation
     logging.info('Running cross validation...')
     skf = stratified_kfold(n_splits=n_splits)
     scores = cross_val_score(gbm, training_data[predictors].values,
                              training_data[target].values,
                              scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
                              fit_params=fit_params)
+    
     return scores.mean()
 
 
 def lgb_train(params, training_data, predictors, target,
               validation_data=None, categorical_features=None,
               early_stopping_rounds=20):
+
+    # Load default parameters and update them using provided parameters
     lgb_params = deepcopy(LGBM_PARAMS)
     lgb_params.update(params)
+    
+    # Instantiate classification model with the default parameter values
     gbm = lgb.LGBMRegressor(**lgb_params)
+    
+    # Dictionary with additional parameters to pass to .fit method.
     fit_params = {
         'feature_name': predictors,
         'categorical_feature': categorical_features,
-        # 'callbacks': [lgb.print_evaluation(10)],
+        # 'callbacks': [lgb.print_evaluation(period=10)]
     }
+    
+    # If we're given some validation data, we can use it for early stopping    
     if validation_data is not None:
         fit_params['eval_set'] = [(validation_data[predictors].values,
                                    validation_data[target].values)]
         fit_params['early_stopping_rounds'] = early_stopping_rounds
         fit_params['eval_metric'] = 'auc'
+    
+    # Train the model
     logging.info('Training the model...')
     gbm = gbm.fit(training_data[predictors].values,
                   training_data[target].values, **fit_params)
+    
     return gbm
 
 
-class StoreLoggingLevel(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError('`nargs` is not supported.')
-        super().__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, value, option_string=None):
-        level = getattr(logging, value.upper(), None)
-        if not isinstance(level, int):
-            raise ValueError('Invalid log level: {}'.format(value))
-        setattr(namespace, self.dest, level)
-
-
-def make_args_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-      '--train-file', help='Path to training data', required=True)
-    parser.add_argument(
-      '--valid-file', help='Path to validation data', required=False)
-    parser.add_argument(
-      '--test-file', help='Path to test data', required=False)
-    parser.add_argument(
-        '--job-dir',
-        help='Directory where to store checkpoints and exported models.',
-        default='.')
-    parser.add_argument(
-        '--log', help='Logging level', default=logging.DEBUG,
-        action=StoreLoggingLevel)
-    return parser
-
-
 def main():
-    args = make_args_parser().parse_args()
+    args = lf.make_args_parser().parse_args()
     logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s',
                         level=args.log)
 
     logging.info('Preprocessing...')
+    
     # Load training data set, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
+    
     # Load validation data set, i.e. "the 10%"
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
-    # Load the test data set, i.e. data for which we need to make predictions.
+        
+    # Load the test data set, i.e. data for which we need to make predictions
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
     
     # Column we're trying to predict
     target = 'is_attributed'
-    # Columns our predictions are based on.
+    
+    # Columns our predictions are based on
     predictors = ['app', 'device', 'os', 'channel', 'hour']
     categorical = ['app', 'device', 'os', 'channel', 'hour']
     params = {
@@ -191,12 +180,12 @@ def main():
     gbm.booster_.save_model(model_file)
 
     if test_df is not None:
-        logging.info('Making predictions ...')
+        logging.info('Making predictions...')
         predictions = gbm.predict(test_df[predictors])
         predictions_file = path.join(args.job_dir, 'predictions.txt')
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
                       predictions}).to_csv(predictions_file)
     
-    
+# Run code
 if __name__ == '__main__':
     main()

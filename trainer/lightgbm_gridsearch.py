@@ -16,8 +16,6 @@
 # limitations under the License.
 
 from __future__ import absolute_import, division, print_function
-import argparse
-from builtins import int, super
 import json
 import logging
 from os import path
@@ -25,6 +23,7 @@ from os import path
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
 
+import lightgbm_functions as lf
 import preprocessing as pp
 
 
@@ -49,6 +48,7 @@ LGBM_PARAMS = {
     'nthread':            8,
     'verbose':            0,
 }
+
 
 # Parameters to be optimized
 LGBM_PARAM_GRID = {
@@ -79,6 +79,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     }
 
     # If we're given some validation data, we can use it for early stopping    
+    #TODO: Is this relevant?
     if validation_data is not None:
 
         fit_params['eval_set'] = [(validation_data[predictors].values,
@@ -106,39 +107,8 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     return best_params
 
 
-class StoreLoggingLevel(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError('`nargs` is not supported.')
-        super().__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, value, option_string=None):
-        level = getattr(logging, value.upper(), None)
-        if not isinstance(level, int):
-            raise ValueError('Invalid log level: {}'.format(value))
-        setattr(namespace, self.dest, level)
-
-
-def make_args_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-      '--train-file', help='Path to training data', required=True)
-    parser.add_argument(
-      '--valid-file', help='Path to validation data', required=False)
-    parser.add_argument(
-      '--test-file', help='Path to test data', required=False)
-    parser.add_argument(
-        '--job-dir',
-        help='Directory where to store checkpoints and exported models.',
-        default='.')
-    parser.add_argument(
-        '--log', help='Logging level', default=logging.DEBUG,
-        action=StoreLoggingLevel)
-    return parser
-
-
 def main():
-    args = make_args_parser().parse_args()
+    args = lf.make_args_parser().parse_args()
     logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s',
                         level=args.log)
 
