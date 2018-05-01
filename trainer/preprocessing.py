@@ -52,13 +52,14 @@ def run(train_file, test_file):
 
     train_df.info()
     
-    train_df['ip_cut'] = pd.cut(train_df.ip,15)
+    #### NN Preprocessing ####
+    '''train_df['ip_cut'] = pd.cut(train_df.ip,15)
     
     train_df = train_df.drop(['ip','click_id'], axis = 1)
     
     categorical_columns = ['app', 'device', 'os', 'channel', 'ip_cut', 'hour']
     
-    train_df = pd.get_dummies(train_df, columns = categorical_columns)
+    train_df = pd.get_dummies(train_df, columns = categorical_columns)'''
 
     test_df = train_df[len_train:]
     print(len(test_df))
