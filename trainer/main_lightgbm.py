@@ -188,9 +188,8 @@ def main():
     gbm = lgb_train(params, train_df, predictors, target,
                     categorical_features=categorical,
                     validation_data=valid_df)
-    if not path.exists(args.job_dir) \
-       and path.exists(path.dirname(path.abspath(args.job_dir))):
-        os.mkdir(args.job_dir)
+    if not path.exists(args.job_dir):
+        os.makedirs(args.job_dir)
     model_file = path.join(args.job_dir, 'model.txt')
     logging.info('Saving trained model to {!r}...'.format(model_file))
     gbm.booster_.save_model(model_file)
