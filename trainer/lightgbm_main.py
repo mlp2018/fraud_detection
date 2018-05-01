@@ -155,6 +155,7 @@ def main():
     # Check of optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
     
+    lgb_params = deepcopy(LGBM_PARAMS)
     if os.path.isfile(optim_file):
         with open(optim_file, "r") as optim_file:
             optim_values = json.load(optim_file)
@@ -162,7 +163,6 @@ def main():
         # Replace default values
         logging.info('Replacing default parameter values with optimized \
 ones...')
-        lgb_params = deepcopy(LGBM_PARAMS)
         lgb_params.update(optim_values)
         
     else:
