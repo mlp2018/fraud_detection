@@ -68,4 +68,4 @@ def load_test(filename):
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-return _preprocess_common(load_test_raw(filename))
+    return _preprocess_common(load_test_raw(filename))
