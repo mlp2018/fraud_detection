@@ -23,8 +23,8 @@ from os import path
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
 
-import lightgbm_functions as lf
-import preprocessing as pp
+import trainer.lightgbm_functions as lf
+import trainer.preprocessing as pp
 
 
 # Default parameters

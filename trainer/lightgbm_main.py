@@ -26,9 +26,9 @@ import lightgbm as lgb
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
 
-from cross_validation import stratified_kfold, cross_val_score
-import lightgbm_functions as lf
-import preprocessing as pp
+from trainer.cross_validation import stratified_kfold, cross_val_score
+import trainer.lightgbm_functions as lf
+import trainer.preprocessing as pp
 
 
 # Default parameters
