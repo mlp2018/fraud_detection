@@ -26,9 +26,9 @@ import lightgbm as lgb
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
 
-from trainer.cross_validation import stratified_kfold, cross_val_score
-import trainer.lightgbm_functions as lf
-import trainer.preprocessing as pp
+from .cross_validation import stratified_kfold, cross_val_score
+from . import lightgbm_functions as lf
+from . import preprocessing as pp
 
 
 # Default parameters
@@ -183,9 +183,8 @@ default ones...')
                     validation_data=valid_df)
     
     # Check if job-dir exists, and if not, create it
-    if not path.exists(args.job_dir) \
-       and path.exists(path.dirname(path.abspath(args.job_dir))):
-        os.mkdir(args.job_dir)
+    if not path.exists(args.job_dir):
+        os.makedirs(args.job_dir)
         
     # save model to file
     model_file = path.join(args.job_dir, 'model.txt')
