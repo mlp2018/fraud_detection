@@ -60,7 +60,7 @@ LGBM_PARAM_GRID = {
 
 def lgb_gridsearch(default_params, param_grid, training_data, predictors, 
                    target, validation_data=None, categorical_features=None, 
-                   n_splits=2, early_stopping_rounds=20):
+                   n_splits=5, early_stopping_rounds=20):
     """
     Performs a grid search to find the optimal value for all parameters.
     The grid search makes use of k-fold cross-validation.
@@ -132,7 +132,7 @@ def main():
     logging.info('Running the grid search...')
     best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, train_df, 
                                  predictors, target, 
-                                 categorical_features=categorical, n_splits=2,
+                                 categorical_features=categorical, n_splits=5,
                                  validation_data=valid_df)
     
     # Write best parameters to file
