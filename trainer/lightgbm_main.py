@@ -25,10 +25,9 @@ from os import path
 import lightgbm as lgb
 import pandas as pd
 
-from .cross_validation import stratified_kfold, cross_val_score
-from . import lightgbm_functions as lf
-from . import preprocessing as pp
-
+from trainer.cross_validation import stratified_kfold, cross_val_score
+import trainer.lightgbm_functions as lf
+import trainer.preprocessing as pp
 
 
 # Default parameters
