@@ -24,11 +24,11 @@ from os import path
 
 import lightgbm as lgb
 import pandas as pd
-from sklearn.model_selection import GridSearchCV
 
 from .cross_validation import stratified_kfold, cross_val_score
 from . import lightgbm_functions as lf
 from . import preprocessing as pp
+
 
 
 # Default parameters
@@ -55,7 +55,7 @@ LGBM_PARAMS = {
 
 
 def lgb_cv(params, training_data, predictors, target, validation_data=None, 
-           categorical_features=None, n_splits=2, early_stopping_rounds=20):
+           categorical_features=None, n_splits=5, early_stopping_rounds=20):
     """
     Returns the average score after performing cross validation on
     `training_data` with `n_splits` splits. At each iteration, LightDBM
@@ -172,7 +172,7 @@ default ones...')
     # Run cross-validation
     logging.info('Cross-validation part...')
     score = lgb_cv(lgb_params, train_df, predictors, target,
-                   categorical_features=categorical, n_splits=2,
+                   categorical_features=categorical, n_splits=5,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
     
@@ -196,6 +196,7 @@ default ones...')
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[predictors])
         predictions_file = path.join(args.job_dir, 'predictions.txt')
+        logging.info('Saving predictions to {!r}...'.format(predictions_file))
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
                       predictions}).to_csv(predictions_file)
     
