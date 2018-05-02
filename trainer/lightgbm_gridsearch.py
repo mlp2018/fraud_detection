@@ -125,8 +125,8 @@ def main():
     target = 'is_attributed'
     
     # Columns our predictions are based on.
-    predictors = ['app', 'device', 'os', 'channel', 'hour']
-    categorical = ['app', 'device', 'os', 'channel', 'hour']
+    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
+    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
     
     # Run grid search
     logging.info('Running the grid search...')
