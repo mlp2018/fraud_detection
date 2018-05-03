@@ -49,12 +49,14 @@ print('data prep...')
 
 
 
-#We have most and least freq hours observed in test data as below
-most_freq_hours_in_test_data = [4, 5, 9, 10, 13, 14]
-least_freq_hours_in_test_data = [6, 11, 15]
+
 
 
 def prep_data( df ):
+    
+    #We have most and least freq hours observed in test data as below
+    most_freq_hours_in_test_data = [4, 5, 9, 10, 13, 14]
+    least_freq_hours_in_test_data = [6, 11, 15]
     
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('uint8')
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype('uint8')
@@ -151,14 +153,14 @@ train_df.describe()
 
 
 #plot data
-train_df.boxplot()
-train_df.hist()
+#train_df.boxplot()
+#train_df.hist()
 #plot data against predictor 
-train_df.groupby('is_attributed').hour.value_counts().unstack(0).plot.barh()
-train_df.groupby('is_attributed').os.value_counts().unstack(0).plot.barh()
-train_df.groupby('is_attributed').channel.value_counts().unstack(0).plot.barh()
-train_df.groupby('is_attributed').device.value_counts().unstack(0).plot.barh()
-train_df.groupby('is_attributed').app.value_counts().unstack(0).plot.barh()
+#train_df.groupby('is_attributed').hour.value_counts().unstack(0).plot.barh()
+#train_df.groupby('is_attributed').os.value_counts().unstack(0).plot.barh()
+#train_df.groupby('is_attributed').channel.value_counts().unstack(0).plot.barh()
+#train_df.groupby('is_attributed').device.value_counts().unstack(0).plot.barh()
+#train_df.groupby('is_attributed').app.value_counts().unstack(0).plot.barh()
 
 print(train_df.head(n=15))
 

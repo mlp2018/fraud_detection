@@ -2,6 +2,7 @@
 # Copyright 2018 Sophie Arana
 # Copyright 2018 Johanna de Vos
 # Copyright 2018 Tom Westerhout
+# Copyright 2018 Andre Vargas
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -148,8 +149,8 @@ def main():
     target = 'is_attributed'
     
     # Columns our predictions are based on
-    predictors = ['app', 'device', 'os', 'channel', 'hour']
-    categorical = ['app', 'device', 'os', 'channel', 'hour']
+    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
+    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
     
     # Check of optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
