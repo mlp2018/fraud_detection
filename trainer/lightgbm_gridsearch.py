@@ -49,12 +49,13 @@ LGBM_PARAMS = {
     'nthread':            8,
     'verbose':            0,
     'n_estimators':       99999999,
+	'scale_pos_weight':   100.0  
 }
 
 
 # Parameters to be optimized
 LGBM_PARAM_GRID = {
-    
+    'scale_pos_weight': [500, 1000, 5000],
     'min_data_in_leaf': [100, 300, 500, 700, 900, 1100, 1300, 2000],
     'max_bin': [270, 290, 300, 350, 400, 500],
     'reg_alpha': [.0001, .001, .003, .01, .03, .1],
