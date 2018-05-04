@@ -189,6 +189,7 @@ default ones...')
     
     # Write parameter values to file
     output_file = path.join(args.job_dir, 'used_param_values.txt')
+    logging.info('Saving used parameter values to {!r}...'.format(output_file))
        
     with open(output_file, "w") as param_file:
         json.dump(lgb_params, param_file)
