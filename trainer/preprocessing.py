@@ -1,4 +1,4 @@
-# Copyright 2018 Aloisio Dourado
+# Copyright 2018 Alexander Kireev
 # Copyright 2018 Andre Vargas
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
