@@ -10,11 +10,13 @@ import logging
 
 from keras.layers import Input, Embedding, Dense, Flatten, Dropout, concatenate
 from keras.layers import BatchNormalization, SpatialDropout1D, Conv1D
-from keras.callbacks import Callback
+from keras.callbacks import Callback, ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from keras.models import Model
 from keras.optimizers import Adam
 
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
+from IPython.display import clear_output
 
 from trainer.cross_validation import stratified_kfold, cross_val_score
 import trainer.preprocessing as pp
@@ -30,7 +32,6 @@ class StoreLoggingLevel(argparse.Action):
         if not isinstance(level, int):
             raise ValueError('Invalid log level: {}'.format(value))
         setattr(namespace, self.dest, level)
-
 
 def make_args_parser():
     parser = argparse.ArgumentParser()
@@ -49,57 +50,79 @@ def make_args_parser():
         action=StoreLoggingLevel)
     return parser
 
+class PlotLosses(Callback):
+    
+    def on_train_begin(self, logs={}):
+        self.i = 0
+        self.x = []
+        self.losses = []
+        self.val_losses = []
+        self.fig = plt.figure()
+        self.logs = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        
+        self.logs.append(logs)
+        self.x.append(self.i)
+        self.losses.append(logs.get('loss'))
+        self.val_losses.append(logs.get('val_loss'))
+        self.i += 1
+
+        clear_output(wait=True)
+        plt.plot(self.x, self.losses, label="loss")
+        plt.plot(self.x, self.val_losses, label="val_loss")
+        plt.grid()
+        plt.legend()
+        plt.show();
+        
+def get_values(df):
+    return df.columns.values.tolist() 
+
 def get_keras_data(dataset):
-    X = {
-        'app': np.array(dataset.app),
-        'ch': np.array(dataset.channel),
-        'dev': np.array(dataset.device),
-        'os': np.array(dataset.os),
-        'h': np.array(dataset.hour),
-    }
+    
+    variables = get_values(dataset)
+       
+    X = dict([(var, np.array(dataset[var])) for var in variables])
+ 
     return X
 
 def NN(train_df, val_df, test_df):
     logging.info('Neural Network preprocessing')
+    
+    if val_df is None:
+        val_df = train_df[len(train_df)-10000:len(train_df)]
+        train_df = train_df[0:len(train_df)-10000]
+        
     y_train = train_df['is_attributed'].values
-    train_df.drop(['ip','is_attributed'], axis = 1)
+    train_df.drop(['is_attributed'], axis = 1)
     
     if val_df is not None:
         y_val = val_df['is_attributed'].values 
-        val_df.drop(['click_id', 'ip','is_attributed'], axis = 1)
+        val_df.drop(['is_attributed'], axis = 1)
         val_df = get_keras_data(val_df)
+        
+    max_var = []
     
     if test_df is not None:
-        max_app = np.max([train_df['app'].max(), test_df['app'].max()])+1
-        max_ch = np.max([train_df['channel'].max(), test_df['channel'].max()])+1
-        max_dev = np.max([train_df['device'].max(), test_df['device'].max()])+1
-        max_os = np.max([train_df['os'].max(), test_df['os'].max()])+1
-        max_h = np.max([train_df['hour'].max(), test_df['hour'].max()])+1
+        for i, var in enumerate(get_values(train_df)):
+            max_var.append(np.max([train_df[var].max(), test_df[var].max()])+1)    
+        train_df = get_keras_data(train_df)
     else:
-        max_app = train_df['app'].max()+1
-        max_ch = train_df['channel'].max()+1
-        max_dev = train_df['device'].max()+1
-        max_os = train_df['os'].max()+1
-        max_h = train_df['hour'].max()
-    
-    train_df = get_keras_data(train_df)
+        for i, var in enumerate(get_values(train_df)):
+            max_var.append(train_df[var].max()+1)    
+        train_df = get_keras_data(train_df)
     
     logging.info('Model is creating...')
     emb_n = 50
     dense_n = 1000
     
-    in_app = Input(shape=[1], name = 'app')
-    emb_app = Embedding(max_app, emb_n)(in_app)
-    in_ch = Input(shape=[1], name = 'ch')
-    emb_ch = Embedding(max_ch, emb_n)(in_ch)
-    in_dev = Input(shape=[1], name = 'dev')
-    emb_dev = Embedding(max_dev, emb_n)(in_dev)
-    in_os = Input(shape=[1], name = 'os')
-    emb_os = Embedding(max_os, emb_n)(in_os)
-    in_h = Input(shape=[1], name = 'h')
-    emb_h = Embedding(max_h, emb_n)(in_h) 
+    in_var = []
+    emb_var = []    
+    for i, var in enumerate(train_df.keys()):
+        in_var.append(Input(shape=[1], name = var))
+        emb_var.append(Embedding(max_var[i], emb_n)(in_var[i]))
     
-    fe = concatenate([(emb_app), (emb_ch), (emb_dev), (emb_os), (emb_h)])
+    fe = concatenate([emb for emb in emb_var])
     s_dout = SpatialDropout1D(0.2)(fe)
     fl1 = Flatten()(s_dout)
     conv = Conv1D(100, kernel_size=4, strides=1, padding='same')(s_dout)
@@ -109,30 +132,27 @@ def NN(train_df, val_df, test_df):
     x = Dropout(0.2)(Dense(dense_n,activation='relu')(x))
     outp = Dense(1,activation='sigmoid')(x)
     
-    model = Model(inputs=[in_app,in_ch,in_dev,in_os,in_h], outputs=outp)
+    model = Model(inputs=[var for var in in_var], outputs=outp)
     
     logging.info('Model is compiling...')
+    #parameters 
     batch_size = 50000
-    epochs = 2
-    exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
-    steps = int(len(list(train_df)[0]) / batch_size) * epochs
-    lr_init, lr_fin = 0.002, 0.0002
-    lr_decay = exp_decay(lr_init, lr_fin, steps)
-    optimizer_adam = Adam(lr=0.002, decay=lr_decay)
+    epochs = 10
+    lr_fin = 0.002, 0.0002
+    optimizer_adam = Adam(lr=0.002)
     
     model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
-    
     model.summary()
+    
+    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True), PlotLosses(), ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
     
     logging.info('Model is training...')
     class_weight = {0:.01,1:.99} # magic
-    model.fit(train_df, y_train, batch_size=batch_size, epochs=2, class_weight=class_weight, shuffle=True, verbose=2)
+    model.fit(train_df, y_train, validation_split=0.2, batch_size=batch_size, epochs=epochs, class_weight=class_weight, shuffle=True, verbose=2, callbacks=callbacks)
     del train_df, y_train; gc.collect()
-    #model.save_weights('imbalanced_data.h5')
     
     if val_df is not None:
         logging.info('Prediction on validation set')
-        #Predict on validation set
         predictions_NN_prob = model.predict(val_df, batch_size=batch_size, verbose=2)
         del val_df; gc.collect()
         predictions_NN_prob = predictions_NN_prob[:,0]
@@ -153,7 +173,7 @@ def NN(train_df, val_df, test_df):
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
         del test_df; gc.collect()
         logging.info("Writing....")
-        sub.to_csv('imbalanced_data.csv',index=False)
+        sub.to_csv('sub_NN.csv',index=False)
         logging.info("Done...")
         logging.info(sub.info())
 
@@ -166,13 +186,15 @@ def main():
     logging.info('Preprocessing...')
     # Load training data set, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
+    
     # Load validation data set, i.e. "the 10%"
     val_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
+    
     # Load the test data set, i.e. data for which we need to make predictions.
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
-    
+        
     NN(train_df, val_df, test_df)
     
 if __name__ == '__main__':
