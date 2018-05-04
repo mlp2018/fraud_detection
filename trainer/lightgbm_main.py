@@ -148,10 +148,6 @@ def main():
     # Column we're trying to predict
     target = 'is_attributed'
     
-    # Columns our predictions are based on
-    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    
     # Check of optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
     
@@ -171,15 +167,15 @@ default ones...')
     
     # Run cross-validation
     logging.info('Cross-validation part...')
-    score = lgb_cv(lgb_params, train_df, predictors, target,
-                   categorical_features=categorical, n_splits=5,
+    score = lgb_cv(lgb_params, train_df, pp.predictors, target,
+                   categorical_features=pp.categorical, n_splits=5,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
     
     # Train the final model on all data
     logging.info('Training on all data...')
-    gbm = lgb_train(lgb_params, train_df, predictors, target,
-                    categorical_features=categorical,
+    gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
+                    categorical_features=pp.categorical,
                     validation_data=valid_df)
     
     # Check if job-dir exists, and if not, create it
@@ -200,7 +196,7 @@ default ones...')
     # Make predictions and save to file
     if test_df is not None:
         logging.info('Making predictions...')
-        predictions = gbm.predict(test_df[predictors])
+        predictions = gbm.predict(test_df[pp.predictors])
         predictions_file = path.join(args.job_dir, 'predictions.txt')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':

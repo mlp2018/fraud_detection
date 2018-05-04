@@ -124,16 +124,12 @@ def main():
     # Column we're trying to predict
     target = 'is_attributed'
     
-    # Columns our predictions are based on.
-    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    
     # Run grid search
     logging.info('Running the grid search...')
     best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, train_df, 
-                                 predictors, target, 
-                                 categorical_features=categorical, n_splits=5,
-                                 validation_data=valid_df)
+                                 pp.predictors, target, 
+                                 categorical_features=pp.categorical, 
+                                 n_splits=5, validation_data=valid_df)
     
     # Write best parameters to file
     output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
