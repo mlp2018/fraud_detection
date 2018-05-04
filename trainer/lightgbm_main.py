@@ -186,10 +186,16 @@ default ones...')
     if not path.exists(args.job_dir):
         os.makedirs(args.job_dir)
         
-    # save model to file
+    # Save model to file
     model_file = path.join(args.job_dir, 'model.txt')
     logging.info('Saving trained model to {!r}...'.format(model_file))
     gbm.booster_.save_model(model_file)
+    
+    # Write parameter values to file
+    output_file = path.join(args.job_dir, 'used_param_values.txt')
+       
+    with open(output_file, "w") as param_file:
+        json.dump(lgb_params, param_file)
 
     # Make predictions and save to file
     if test_df is not None:
