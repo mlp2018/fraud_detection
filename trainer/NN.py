@@ -89,26 +89,27 @@ def get_keras_data(dataset):
 def NN(train_df, val_df, test_df):
     logging.info('Neural Network preprocessing')
     
-    if val_df is None:
+    '''if val_df is None:
         val_df = train_df[len(train_df)-10000:len(train_df)]
-        train_df = train_df[0:len(train_df)-10000]
+        train_df = train_df[0:len(train_df)-10000]'''
         
     y_train = train_df['is_attributed'].values
-    train_df.drop(['is_attributed'], axis = 1)
+    train_df = train_df.drop(['is_attributed'], axis = 1)
     
     if val_df is not None:
         y_val = val_df['is_attributed'].values 
-        val_df.drop(['is_attributed'], axis = 1)
+        val_df = val_df.drop(['is_attributed'], axis = 1)
         val_df = get_keras_data(val_df)
         
+    list_variables = get_values(train_df)
+        
     max_var = []
-    
     if test_df is not None:
-        for i, var in enumerate(get_values(train_df)):
+        for i, var in enumerate(list_variables):
             max_var.append(np.max([train_df[var].max(), test_df[var].max()])+1)    
         train_df = get_keras_data(train_df)
     else:
-        for i, var in enumerate(get_values(train_df)):
+        for i, var in enumerate(list_variables):
             max_var.append(train_df[var].max()+1)    
         train_df = get_keras_data(train_df)
     
@@ -118,7 +119,7 @@ def NN(train_df, val_df, test_df):
     
     in_var = []
     emb_var = []    
-    for i, var in enumerate(train_df.keys()):
+    for i, var in enumerate(list_variables):
         in_var.append(Input(shape=[1], name = var))
         emb_var.append(Embedding(max_var[i], emb_n)(in_var[i]))
     
@@ -138,17 +139,20 @@ def NN(train_df, val_df, test_df):
     #parameters 
     batch_size = 50000
     epochs = 10
-    lr_fin = 0.002, 0.0002
-    optimizer_adam = Adam(lr=0.002)
+    exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
+    steps = int(len(list(train_df)[0]) / batch_size) * epochs
+    lr_init, lr_fin = 0.002, 0.0002
+    lr_decay = exp_decay(lr_init, lr_fin, steps)
+    optimizer_adam = Adam(lr=0.002, decay=lr_decay)
     
     model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
     model.summary()
     
-    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True), PlotLosses(), ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
+    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)]#, PlotLosses()]#, ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
     
     logging.info('Model is training...')
     class_weight = {0:.01,1:.99} # magic
-    model.fit(train_df, y_train, validation_split=0.2, batch_size=batch_size, epochs=epochs, class_weight=class_weight, shuffle=True, verbose=2, callbacks=callbacks)
+    model.fit(train_df, y_train, validation_split=0.1, batch_size=batch_size, epochs=epochs, class_weight=class_weight, shuffle=True, verbose=2, callbacks=callbacks)
     del train_df, y_train; gc.collect()
     
     if val_df is not None:
@@ -161,13 +165,13 @@ def NN(train_df, val_df, test_df):
         
         #print accuracy
         acc_NN = accuracy_score(y_val, predictions_NN)
-        logging.info('Overall accuracy of Neural Network model:', acc_NN)
+        print('Overall accuracy of Neural Network model:', acc_NN)
     
     if test_df is not None:
         logging.info('Prediction on test set')
         sub = pd.DataFrame()
         sub['click_id'] = test_df['click_id'].astype('int')
-        test_df.drop(['click_id', 'ip'], axis=1)
+        test_df = test_df.drop(['click_id'], axis=1)
         test_df = get_keras_data(test_df)
         
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
