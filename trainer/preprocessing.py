@@ -121,8 +121,6 @@ def _preprocess_common(df):
     #print(df.describe())
     return( df )
 
-
-
 def load_train_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'is_attributed']

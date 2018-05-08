@@ -138,7 +138,7 @@ def NN(train_df, val_df, test_df):
     logging.info('Model is compiling...')
     #parameters 
     batch_size = 50000
-    epochs = 10
+    epochs = 12
     exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
     steps = int(len(list(train_df)[0]) / batch_size) * epochs
     lr_init, lr_fin = 0.002, 0.0002
@@ -148,7 +148,7 @@ def NN(train_df, val_df, test_df):
     model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
     model.summary()
     
-    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)]#, PlotLosses()]#, ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
+    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)] #, PlotLosses(),ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
     
     logging.info('Model is training...')
     class_weight = {0:.01,1:.99} # magic
