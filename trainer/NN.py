@@ -138,7 +138,7 @@ def NN(train_df, val_df, test_df):
     logging.info('Model is compiling...')
     #parameters 
     batch_size = 50000
-    epochs = 12
+    epochs = 2 #12 for sample_train
     exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
     steps = int(len(list(train_df)[0]) / batch_size) * epochs
     lr_init, lr_fin = 0.002, 0.0002
@@ -177,7 +177,7 @@ def NN(train_df, val_df, test_df):
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
         del test_df; gc.collect()
         logging.info("Writing....")
-        sub.to_csv('sub_NN.csv',index=False)
+        sub.to_csv('sub_NN_kernel.csv',index=False)
         logging.info("Done...")
         logging.info(sub.info())
 
@@ -198,7 +198,7 @@ def main():
     # Load the test data set, i.e. data for which we need to make predictions.
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
-        
+    
     NN(train_df, val_df, test_df)
     
 if __name__ == '__main__':
