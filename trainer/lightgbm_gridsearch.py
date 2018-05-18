@@ -22,6 +22,7 @@ from os import path
 
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedKFold
 
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
@@ -88,13 +89,15 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
         fit_params['eval_metric'] = 'auc'
     
     # Instantiate the grid
-    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=n_splits, 
-                        scoring='roc_auc', n_jobs=1, verbose=1)
+    skf = StratifiedKFold(n_splits=n_splits, random_state=1)
+    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
+                        scoring='roc_auc', n_jobs=1, verbose=1, fit_params=fit_params)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
     grid.fit(training_data[predictors].values, training_data[target].values)
-    
+
+
     # Examine the results
     scores = grid.cv_results_['mean_test_score']
     best_score = grid.best_score_
