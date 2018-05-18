@@ -2,6 +2,7 @@
 # Copyright 2018 Sophie Arana
 # Copyright 2018 Johanna de Vos
 # Copyright 2018 Tom Westerhout
+# Copyright 2018 Andre Vargas
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
