@@ -60,8 +60,8 @@ LGBM_PARAM_GRID = {
     'max_bin': [270, 290, 300, 350, 400, 500],
     'reg_alpha': [.0001, .001, .003, .01, .03, .1],
     'reg_lambda': [.0001, .001, .003, .01, .03, .1],
-    'learning_rate': [.0001, .001, .003, .01, .03, 0.05, 0.08, .1], # NB: Use 'range' or something similar
-    'num_leaves': [27, 28, 29, 30, 31, 32],  # we should let it be smaller than 2^(max_depth)
+    'learning_rate': [.0001, .001, .003, .01, .03, .1], # NB: Use 'range' or something similar
+    'num_leaves': [27, 29, 32],  # we should let it be smaller than 2^(max_depth)
 }
 
 
