@@ -26,7 +26,8 @@ from os import path
 import lightgbm as lgb
 import pandas as pd
 
-from trainer.cross_validation import stratified_kfold, cross_val_score
+from trainer.cross_validation import cross_val_score
+from sklearn.model_selection import StratifiedKFold
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
 
@@ -85,7 +86,7 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
 
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
-    skf = stratified_kfold(n_splits=n_splits)
+    skf = StratifiedKFold(n_splits=n_splits, random_state=1)
     scores = cross_val_score(gbm, training_data[predictors].values,
                              training_data[target].values,
                              scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
