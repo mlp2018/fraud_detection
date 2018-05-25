@@ -183,6 +183,8 @@ def preprocess_confidence(train_df, valid_df, test_df):
             """Calculate the attributed rate. Scale by confidence"""
             rate = x.sum() / float(x.count())
             conf = np.min([1, np.log(x.count()) / log_group])
+            #if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+            #    rate = np.nan # however this does not yield same performance as the weighting.
             return rate * conf
 
         # Perform the merge of new features with validation data set
