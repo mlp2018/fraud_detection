@@ -199,10 +199,10 @@ default ones...')
     if test_df is not None:
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[pp.predictors])
-        predictions_file = path.join(args.job_dir, 'predictions.txt')
+        predictions_file = path.join(args.job_dir, 'predictions.csv')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                      predictions}).to_csv(predictions_file)
+                      predictions}).to_csv(predictions_file, index=False)
     
 # Run code
 if __name__ == '__main__':
