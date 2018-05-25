@@ -17,6 +17,7 @@
 import gc
 import logging
 import pandas as pd
+import numpy as np
 
 
 DTYPES = {
@@ -31,10 +32,13 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 
+predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
               'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
-              'count_ip_hh_app', 'count_ip_hour_device']
-categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 
+              'count_ip_hh_app', 'count_ip_hour_device', 'ip_confRate',
+              'app_confRate','device_confRate', 'os_confRate', 'channel_confRate',
+              'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
+              'channel_os_confRate', 'channel_device_confRate', 'os_device_confRate']
+categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
                'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
                'count_ip_hh_app', 'count_ip_hour_device']
     
@@ -124,13 +128,101 @@ def _preprocess_common(df):
     gc.collect()
     #print( df.info() )
 
-    df.drop( ['ip','day'], axis=1, inplace=True )
+    df.drop(['day'], axis=1, inplace=True)
     gc.collect()
     #print( df.info() )    
     #print(df.describe())
     return( df )
 
 
+def preprocess_confidence(train_df, valid_df, test_df):
+    """
+    Feature creation that should be done given training data and then merged wiht test data.
+    """
+    ATTRIBUTION_CATEGORIES = [
+        # V1 Features #
+        ###############
+        ['ip'], ['app'], ['device'], ['os'], ['channel'],
+
+        # V2 Features #
+        ###############
+        ['app', 'channel'],
+        ['app', 'os'],
+        ['app', 'device'],
+
+        # V3 Features #
+        ###############
+        ['channel', 'os'],
+        ['channel', 'device'],
+        ['os', 'device']
+    ]
+
+    # Find frequency of is_attributed for each unique value in column
+    freqs = {}
+    for cols in ATTRIBUTION_CATEGORIES:
+        # New feature name
+        new_feature = '_'.join(cols) + '_confRate'
+
+        # Perform the groupby
+        group_object = train_df.groupby(cols)
+
+        # Group sizes
+        group_sizes = group_object.size()
+        log_group = np.log(100000)  # 1000 views -> 60% confidence, 100 views -> 40% confidence
+        logging.info(
+        "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. Group Max /Mean / Median / Min: {} / {} / {} / {}".format(
+            cols, new_feature,
+            group_sizes.max(),
+            np.round(group_sizes.mean(), 2),
+            np.round(group_sizes.median(), 2),
+            group_sizes.min()
+        ))
+
+        # Aggregation function
+        def rate_calculation(x):
+            """Calculate the attributed rate. Scale by confidence"""
+            rate = x.sum() / float(x.count())
+            conf = np.min([1, np.log(x.count()) / log_group])
+            #if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+            #    rate = np.nan # however this does not yield same performance as the weighting.
+            return rate * conf
+
+        # Perform the merge of new features with validation data set
+        train_df = train_df.merge(
+            group_object['is_attributed']. \
+                apply(rate_calculation). \
+                reset_index(). \
+                rename(
+                index=str,
+                columns={'is_attributed': new_feature}
+            )[cols + [new_feature]],
+            on=cols, how='left'
+        )
+        # Perform the merge of new features with validation data set
+        valid_df = valid_df.merge(
+            group_object['is_attributed']. \
+                apply(rate_calculation). \
+                reset_index(). \
+                rename(
+                index=str,
+                columns={'is_attributed': new_feature}
+            )[cols + [new_feature]],
+            on=cols, how='left'
+        )
+
+        # Perform the merge of new features with test data set
+        test_df = test_df.merge(
+            group_object['is_attributed']. \
+                apply(rate_calculation). \
+                reset_index(). \
+                rename(
+                index=str,
+                columns={'is_attributed': new_feature}
+            )[cols + [new_feature]],
+            on=cols, how='left'
+        )
+
+    return train_df, valid_df, test_df
 
 def load_train_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
