@@ -22,6 +22,7 @@ from os import path
 
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import StratifiedKFold
 
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
@@ -88,13 +89,15 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
         fit_params['eval_metric'] = 'auc'
     
     # Instantiate the grid
-    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=n_splits, 
-                        scoring='roc_auc', n_jobs=1, verbose=1)
+    skf = StratifiedKFold(n_splits=n_splits, random_state=1)
+    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
+                        scoring='roc_auc', n_jobs=1, verbose=1, fit_params=fit_params)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
     grid.fit(training_data[predictors].values, training_data[target].values)
-    
+
+
     # Examine the results
     scores = grid.cv_results_['mean_test_score']
     best_score = grid.best_score_
@@ -120,20 +123,18 @@ def main():
     # Load validation data set, i.e. "the 10%"
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
+
+    train_df, valid_df = pp.preprocess_confidence(train_df, valid_df)
     
     # Column we're trying to predict
     target = 'is_attributed'
     
-    # Columns our predictions are based on.
-    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    
     # Run grid search
     logging.info('Running the grid search...')
     best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, train_df, 
-                                 predictors, target, 
-                                 categorical_features=categorical, n_splits=5,
-                                 validation_data=valid_df)
+                                 pp.predictors, target, 
+                                 categorical_features=pp.categorical, 
+                                 n_splits=5, validation_data=valid_df)
     
     # Write best parameters to file
     output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')

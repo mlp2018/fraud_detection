@@ -26,7 +26,8 @@ from os import path
 import lightgbm as lgb
 import pandas as pd
 
-from trainer.cross_validation import stratified_kfold, cross_val_score
+from trainer.cross_validation import cross_val_score
+from sklearn.model_selection import StratifiedKFold
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
 
@@ -85,7 +86,7 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
 
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
-    skf = stratified_kfold(n_splits=n_splits)
+    skf = StratifiedKFold(n_splits=n_splits, random_state=1)
     scores = cross_val_score(gbm, training_data[predictors].values,
                              training_data[target].values,
                              scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
@@ -144,15 +145,13 @@ def main():
     # Load the test data set, i.e. data for which we need to make predictions
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
+
+    train_df, valid_df, test_df = pp.preprocess_confidence(train_df, valid_df, test_df)
     
     # Column we're trying to predict
     target = 'is_attributed'
     
-    # Columns our predictions are based on
-    predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq', 'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 'count_ip_hour_device']
-    
-    # Check of optimal parameter values have been established
+    # Check if optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
     
     lgb_params = deepcopy(LGBM_PARAMS)
@@ -171,34 +170,41 @@ default ones...')
     
     # Run cross-validation
     logging.info('Cross-validation part...')
-    score = lgb_cv(lgb_params, train_df, predictors, target,
-                   categorical_features=categorical, n_splits=5,
+    score = lgb_cv(lgb_params, train_df, pp.predictors, target,
+                   categorical_features=pp.categorical, n_splits=5,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
     
     # Train the final model on all data
     logging.info('Training on all data...')
-    gbm = lgb_train(lgb_params, train_df, predictors, target,
-                    categorical_features=categorical,
+    gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
+                    categorical_features=pp.categorical,
                     validation_data=valid_df)
     
     # Check if job-dir exists, and if not, create it
     if not path.exists(args.job_dir):
         os.makedirs(args.job_dir)
         
-    # save model to file
+    # Save model to file
     model_file = path.join(args.job_dir, 'model.txt')
     logging.info('Saving trained model to {!r}...'.format(model_file))
     gbm.booster_.save_model(model_file)
+    
+    # Write parameter values to file
+    output_file = path.join(args.job_dir, 'used_param_values.txt')
+    logging.info('Saving used parameter values to {!r}...'.format(output_file))
+       
+    with open(output_file, "w") as param_file:
+        json.dump(lgb_params, param_file)
 
     # Make predictions and save to file
     if test_df is not None:
         logging.info('Making predictions...')
-        predictions = gbm.predict(test_df[predictors])
-        predictions_file = path.join(args.job_dir, 'predictions.txt')
+        predictions = gbm.predict(test_df[pp.predictors])
+        predictions_file = path.join(args.job_dir, 'predictions.csv')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                      predictions}).to_csv(predictions_file)
+                      predictions}).to_csv(predictions_file, index=False)
     
 # Run code
 if __name__ == '__main__':
