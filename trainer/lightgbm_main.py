@@ -145,6 +145,8 @@ def main():
     # Load the test data set, i.e. data for which we need to make predictions
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
+
+    train_df, valid_df, test_df = pp.preprocess_confidence(train_df, valid_df, test_df)
     
     # Column we're trying to predict
     target = 'is_attributed'

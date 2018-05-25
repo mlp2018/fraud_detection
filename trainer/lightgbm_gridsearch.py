@@ -123,6 +123,8 @@ def main():
     # Load validation data set, i.e. "the 10%"
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
+
+    train_df, valid_df = pp.preprocess_confidence(train_df, valid_df)
     
     # Column we're trying to predict
     target = 'is_attributed'
