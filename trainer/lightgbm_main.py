@@ -149,7 +149,7 @@ def main():
     # Column we're trying to predict
     target = 'is_attributed'
     
-    # Check of optimal parameter values have been established
+    # Check if optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
     
     lgb_params = deepcopy(LGBM_PARAMS)
