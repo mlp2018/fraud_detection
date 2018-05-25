@@ -2,6 +2,7 @@
 # Copyright 2018 Sophie Arana
 # Copyright 2018 Johanna de Vos
 # Copyright 2018 Tom Westerhout
+# Copyright 2018 Andre Vargas 
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,13 +49,22 @@ LGBM_PARAMS = {
     'reg_lambda':         0,  # L2 regularization term on weights
     'nthread':            8,
     'verbose':            0,
+    'n_estimators':       99999999,
+	'scale_pos_weight':   100.0  
 }
 
 
+
 # Parameters to be optimized
+
 LGBM_PARAM_GRID = {
-    'learning_rate':      [0.05, 0.08], # NB: Use 'range' or something similar
-    'num_leaves':         [30, 31],  # we should let it be smaller than 2^(max_depth)
+    'scale_pos_weight': [500, 1000, 5000],
+    'min_data_in_leaf': [100, 300, 500, 700, 900, 1100, 1300, 2000],
+    'max_bin': [270, 290, 300, 350, 400, 500],
+    'reg_alpha': [.0001, .001, .003, .01, .03, .1],
+    'reg_lambda': [.0001, .001, .003, .01, .03, .1],
+    'learning_rate': [.0001, .001, .003, .01, .03, .1], # NB: Use 'range' or something similar
+    'num_leaves': [27, 29, 32],  # we should let it be smaller than 2^(max_depth)
 }
 
 
