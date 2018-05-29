@@ -136,7 +136,7 @@ def main():
     logging.info('Preprocessing...')
     
     # Load training data set, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
+    train_df = pp.load_train(args.train_file, args.samples)
     
     # Load validation data set, i.e. "the 10%"
     valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
@@ -186,14 +186,14 @@ default ones...')
     # Save model to file
     model_file = path.join(args.job_dir, 'model.txt')
     logging.info('Saving trained model to {!r}...'.format(model_file))
-    gbm.booster_.save_model(model_file)
+    with pp.open_dispatching(model_file, mode='wb') as f:
+        json.dump(gbm.booster_.dump_model(), f)
     
     # Write parameter values to file
     output_file = path.join(args.job_dir, 'used_param_values.txt')
     logging.info('Saving used parameter values to {!r}...'.format(output_file))
-       
-    with open(output_file, "w") as param_file:
-        json.dump(lgb_params, param_file)
+    with pp.open_dispatching(output_file, mode='wb') as f:
+        json.dump(lgb_params, f)
 
     # Make predictions and save to file
     if test_df is not None:
@@ -201,8 +201,9 @@ default ones...')
         predictions = gbm.predict(test_df[pp.predictors])
         predictions_file = path.join(args.job_dir, 'predictions.txt')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
-        pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                      predictions}).to_csv(predictions_file)
+        with pp.open_dispatching(predictions_file, mode='wb') as f:
+            pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
+                          predictions}).to_csv(f)
     
 # Run code
 if __name__ == '__main__':
