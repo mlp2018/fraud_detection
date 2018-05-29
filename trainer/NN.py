@@ -15,13 +15,15 @@ from keras.models import Model
 from keras.optimizers import Adam
 
 from sklearn.metrics import accuracy_score
+'''import matplotlib
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
+from IPython.display import clear_output'''
 
 from trainer.cross_validation import stratified_kfold, cross_val_score
 import trainer.preprocessing as pp
+from tensorflow.python.lib.io import file_io
 
-class StoreLoggingLevel(argparse.Action):
+'''class StoreLoggingLevel(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs is not None:
             raise ValueError('`nargs` is not supported.')
@@ -31,7 +33,7 @@ class StoreLoggingLevel(argparse.Action):
         level = getattr(logging, value.upper(), None)
         if not isinstance(level, int):
             raise ValueError('Invalid log level: {}'.format(value))
-        setattr(namespace, self.dest, level)
+        setattr(namespace, self.dest, level)'''
 
 def make_args_parser():
     parser = argparse.ArgumentParser()
@@ -45,12 +47,12 @@ def make_args_parser():
         '--job-dir',
         help='Directory where to store checkpoints and exported models.',
         default='.')
-    parser.add_argument(
+    '''parser.add_argument(
         '--log', help='Logging level', default=logging.DEBUG,
-        action=StoreLoggingLevel)
+        action=StoreLoggingLevel)'''
     return parser
 
-class PlotLosses(Callback):
+'''class PlotLosses(Callback):
     
     def on_train_begin(self, logs={}):
         self.i = 0
@@ -73,7 +75,7 @@ class PlotLosses(Callback):
         plt.plot(self.x, self.val_losses, label="val_loss")
         plt.grid()
         plt.legend()
-        plt.show();
+        plt.show();'''
         
 def get_values(df):
     return df.columns.values.tolist() 
@@ -89,12 +91,13 @@ def get_keras_data(dataset):
 def NN(train_df, val_df, test_df):
     logging.info('Neural Network preprocessing')
     
-    '''if val_df is None:
+    if val_df is None:
         val_df = train_df[len(train_df)-10000:len(train_df)]
-        train_df = train_df[0:len(train_df)-10000]'''
+        train_df = train_df[0:len(train_df)-10000]
         
     y_train = train_df['is_attributed'].values
-    train_df = train_df.drop(['is_attributed'], axis = 1)
+    train_df = train_df.drop('is_attributed', axis = 1)
+    train_df = train_df.drop('attributed_time', axis = 1) #only if no preprocessing
     
     if val_df is not None:
         y_val = val_df['is_attributed'].values 
@@ -102,6 +105,8 @@ def NN(train_df, val_df, test_df):
         val_df = get_keras_data(val_df)
         
     list_variables = get_values(train_df)
+
+    print(list_variables)
         
     max_var = []
     if test_df is not None:
@@ -126,10 +131,10 @@ def NN(train_df, val_df, test_df):
     fe = concatenate([emb for emb in emb_var])
     s_dout = SpatialDropout1D(0.2)(fe)
     fl1 = Flatten()(s_dout)
-    conv = Conv1D(100, kernel_size=4, strides=1, padding='same')(s_dout)
-    fl2 = Flatten()(conv)
-    concat = concatenate([(fl1), (fl2)])
-    x = Dropout(0.2)(Dense(dense_n,activation='relu')(concat))
+    #conv = Conv1D(100, kernel_size=4, strides=1, padding='same')(s_dout)
+    #fl2 = Flatten()(conv)
+    #concat = concatenate([(fl1), (fl2)])
+    x = Dropout(0.2)(Dense(dense_n,activation='relu')(fl1))
     x = Dropout(0.2)(Dense(dense_n,activation='relu')(x))
     outp = Dense(1,activation='sigmoid')(x)
     
@@ -148,12 +153,14 @@ def NN(train_df, val_df, test_df):
     model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
     model.summary()
     
-    callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)] #, PlotLosses(),ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
+    #callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)] #, PlotLosses(),ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
     
     logging.info('Model is training...')
-    class_weight = {0:.01,1:.99} # magic
-    model.fit(train_df, y_train, validation_split=0.1, batch_size=batch_size, epochs=epochs, class_weight=class_weight, shuffle=True, verbose=2, callbacks=callbacks)
+    #class_weight = {0:.01,1:.99,'nan':0} # magic
+    #, validation_split=0.1
+    model.fit(train_df, y_train, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2)
     del train_df, y_train; gc.collect()
+    model.save_weights('model_NN.h5')
     
     if val_df is not None:
         logging.info('Prediction on validation set')
@@ -177,16 +184,17 @@ def NN(train_df, val_df, test_df):
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
         del test_df; gc.collect()
         logging.info("Writing....")
-        sub.to_csv('sub_NN_kernel.csv',index=False)
+        #sub.to_csv('sub_NN_kernel.csv',index=False)
+        with file_io.FileIO('gs://bag_of_students/NN/sub.csv', mode='wb') as fout:
+            sub.to_csv(fout,index=False)
         logging.info("Done...")
         logging.info(sub.info())
 
 
 def main():
     args = make_args_parser().parse_args()
-    logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s',
-                        level=args.log)
-    
+    logging.basicConfig(format='[%(asctime)s] [%(levelname)s] %(message)s')#,level=args.log)
+        
     logging.info('Preprocessing...')
     # Load training data set, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)

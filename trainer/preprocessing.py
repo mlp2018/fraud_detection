@@ -17,7 +17,7 @@
 import gc
 import logging
 import pandas as pd
-
+from tensorflow.python.lib.io import file_io
 
 DTYPES = {
     'ip'            : 'uint32',
@@ -29,7 +29,6 @@ DTYPES = {
     'click_id'      : 'uint32',
 }
 
-
 def _preprocess_common(df):
     """
     Data transformations that should be done to both training and test data.
@@ -39,12 +38,16 @@ def _preprocess_common(df):
     #We have most and least freq hours observed in test data as below
     most_freq_hours_in_test_data = [4, 5, 9, 10, 13, 14]
     least_freq_hours_in_test_data = [6, 11, 15]
-    
+    logging.info('before hour and day')
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('uint8')
+    logging.info('before day')
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype('uint8')
+    logging.info('after day')
     df.drop(['click_time'], axis=1, inplace=True)
+    logging.info('after hour and day')
     gc.collect()
     #print(df['hour'].value_counts(sort = True, ascending = True))
+    logging.info('after hour and day')
     
     #If hour is in most frequent hours in test data then assign group 1, 
     #If hour is in least frequent hours in test data then assign group 2, 
@@ -121,18 +124,20 @@ def _preprocess_common(df):
     #print(df.describe())
     return( df )
 
-def load_train_raw(filename):
-    columns = ['ip','app','device','os', 'channel', 'click_time',
-               'is_attributed']
-    logging.info('Loading labeled data from {!r}...'.format(filename))
-    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
 
+def load_train_raw(filename):
+    logging.info('Loading labeled data from {!r}...'.format(filename))
+    #return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+    with file_io.FileIO(filename, mode='rb') as fin:
+        df = pd.read_csv(fin, sep=",")
+    return df 
 
 def load_test_raw(filename):
-    columns = ['ip','app','device','os', 'channel', 'click_time',
-               'click_id']
     logging.info('Loading unlabeled data from {!r}...'.format(filename))
-    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+    #return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+    with file_io.FileIO(filename, mode='rb') as fin:
+        df = pd.read_csv(fin, sep=",")
+    return df 
 
 
 def load_train(filename):
