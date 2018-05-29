@@ -27,6 +27,11 @@ import lightgbm as lgb
 import pandas as pd
 
 from trainer.cross_validation import stratified_kfold, cross_val_score
+=======
+
+from trainer.cross_validation import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+>>>>>>> Stashed changes
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
 
@@ -175,7 +180,9 @@ default ones...')
                    categorical_features=categorical, n_splits=5,
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
-    
+    #correlation matrix of data
+    corr = pp.correlation_matrix(train_df)
+    print(corr)
     # Train the final model on all data
     logging.info('Training on all data...')
     gbm = lgb_train(lgb_params, train_df, predictors, target,
