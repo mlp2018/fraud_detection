@@ -97,7 +97,8 @@ def NN(train_df, val_df, test_df):
         
     y_train = train_df['is_attributed'].values
     train_df = train_df.drop('is_attributed', axis = 1)
-    train_df = train_df.drop('attributed_time', axis = 1) #only if no preprocessing
+    train_df = train_df.drop('attributed_time', axis = 1) 
+    train_df = train_df.drop('click_time', axis = 1) #only if no preprocessing
     
     if val_df is not None:
         y_val = val_df['is_attributed'].values 
@@ -197,14 +198,14 @@ def main():
         
     logging.info('Preprocessing...')
     # Load training data set, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
+    train_df = pp.load_train_raw(args.train_file)
     
     # Load validation data set, i.e. "the 10%"
     val_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
     
     # Load the test data set, i.e. data for which we need to make predictions.
-    test_df = pp.load_test(args.test_file) if args.test_file is not None \
+    test_df = pp.load_test_raw(args.test_file) if args.test_file is not None \
         else None
     
     NN(train_df, val_df, test_df)
