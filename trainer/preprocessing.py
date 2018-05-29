@@ -21,6 +21,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm as cm
+import seaborn as sns
+    
 
 
 
@@ -128,20 +130,14 @@ def _preprocess_common(df):
 
 
 
-
 def correlation_matrix(df):
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    cmap = cm.get_cmap('jet', 30)
-    cax = ax1.imshow(df.corr(), interpolation="nearest", cmap=cmap)
-    ax1.grid(True)
-    plt.title('Features Correlation')
-    labels=[]
-    ax1.set_xticklabels(labels,fontsize=6)
-    ax1.set_yticklabels(labels,fontsize=6)
-    # Add colorbar, make sure to specify tick locations to match desired ticklabels
-    fig.colorbar(cax, ticks=[.75,.8,.85,.90,.95,1])
+    corr = df.corr()
+    sns.heatmap(corr, 
+            xticklabels=corr.columns.values,
+            yticklabels=corr.columns.values)
     plt.show()
+
+
 
 def load_train_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',

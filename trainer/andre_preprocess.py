@@ -19,9 +19,10 @@
 # limitations under the License.
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import seaborn
-seaborn.set() #make the plots look pretty
+import seaborn as sns
+sns.set() #make the plots look pretty
 
 path = '~/Documents/fraud_detection/trainer/data/'
 
@@ -151,7 +152,12 @@ print("vars and data type: ")
 train_df.info()
 train_df.describe()
 
-
+def correlation_matrix(df):
+    f, ax = plt.subplots(figsize=(10, 8))
+    corr = df.corr()
+    sns.heatmap(corr, mask=np.zeros_like(corr, dtype=np.bool), cmap=sns.diverging_palette(220, 10, as_cmap=True),
+            square=True, ax=ax)
+print (correlation_matrix(train_df))
 #plot data
 #train_df.boxplot()
 #train_df.hist()
