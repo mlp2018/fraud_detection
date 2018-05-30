@@ -139,14 +139,14 @@ def main():
     train_df = pp.load_train(args.train_file)
     
     # Load validation data set, i.e. "the 10%"
-    valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
-        else None
+    if args.valid_file is not None:
+        valid_df = pp.load_train(args.valid_file)
+        train_df, valid_df = pp.preprocess_confidence(train_df, valid_df)
         
     # Load the test data set, i.e. data for which we need to make predictions
-    test_df = pp.load_test(args.test_file) if args.test_file is not None \
-        else None
-
-    train_df, valid_df, test_df = pp.preprocess_confidence(train_df, valid_df, test_df)
+    if args.test_file is not None:
+        test_df = pp.load_test(args.test_file)
+        train_df, test_df = pp.preprocess_confidence(train_df, test_df)
     
     # Column we're trying to predict
     target = 'is_attributed'
@@ -180,7 +180,8 @@ default ones...')
     gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
                     categorical_features=pp.categorical,
                     validation_data=valid_df)
-    
+
+
     # Check if job-dir exists, and if not, create it
     if not path.exists(args.job_dir):
         os.makedirs(args.job_dir)
