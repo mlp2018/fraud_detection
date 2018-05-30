@@ -214,6 +214,15 @@ def preprocess_confidence(train_df, test_df):
         test_df = test_df.fillna(test_df.mean())
     return train_df, test_df
 
+
+def correlation_matrix(df):
+    corr = df.corr()
+    sns.heatmap(corr, 
+            xticklabels=corr.columns.values,
+            yticklabels=corr.columns.values)
+    plt.show()
+
+
 def load_train_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'is_attributed']

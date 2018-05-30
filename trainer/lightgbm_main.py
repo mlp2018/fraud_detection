@@ -175,6 +175,10 @@ default ones...')
                    validation_data=valid_df)
     logging.info('Score: {}'.format(score))
     
+    #correlation matrix of data
+    corr = pp.correlation_matrix(train_df)
+    print(corr)
+
     # Train the final model on all data
     logging.info('Training on all data...')
     gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
