@@ -50,7 +50,7 @@ LGBM_PARAMS = {
     'nthread':            8,
     'verbose':            0,
     'n_estimators':       99999999,
-	'scale_pos_weight':   100.0  
+	'scale_pos_weight':   100
 }
 
 
@@ -58,13 +58,13 @@ LGBM_PARAMS = {
 # Parameters to be optimized
 
 LGBM_PARAM_GRID = {
-    'scale_pos_weight': [500, 1000, 5000],
-    'min_data_in_leaf': [100, 300, 500, 700, 900, 1100, 1300, 2000],
-    'max_bin': [270, 290, 300, 350, 400, 500],
-    'reg_alpha': [.0001, .001, .003, .01, .03, .1],
-    'reg_lambda': [.0001, .001, .003, .01, .03, .1],
-    'learning_rate': [.0001, .001, .003, .01, .03, .1], # NB: Use 'range' or something similar
-    'num_leaves': [27, 29, 32],  # we should let it be smaller than 2^(max_depth)
+    'scale_pos_weight': [100, 500, 1000, 5000],
+    'min_data_in_leaf': [20, 100, 300, 500, 700, 900, 1100, 1300, 2000], # TODO: Why is this name different from 'min_child_samples'?
+    'max_bin': [255, 270, 290, 300, 350, 400, 500],
+    'reg_alpha': [0, .0001, .001, .003, .01, .03, .1],
+    'reg_lambda': [0, .0001, .001, .003, .01, .03, .1],
+    'learning_rate': [.0001, .001, .003, .01, .03, 0.08, .1], # NB: Use 'range' or something similar
+    'num_leaves': [27, 29, 31, 32],  # we should let it be smaller than 2^(max_depth)
 }
 
 
