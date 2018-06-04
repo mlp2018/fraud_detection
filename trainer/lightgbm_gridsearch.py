@@ -60,11 +60,13 @@ LGBM_PARAMS = {
 LGBM_PARAM_GRID = {
     'scale_pos_weight': [100, 500, 1000, 5000],
     'min_data_in_leaf': [20, 100, 300, 500, 700, 900, 1100, 1300, 2000], # TODO: Why is this name different from 'min_child_samples'?
-    'max_bin': [255, 270, 290, 300, 350, 400, 500],
+    'subsample': [0.3, 0.6, 1],
+    'colsample_by_tree': [0.3, 0.6, 1],
     'reg_alpha': [0, .0001, .001, .003, .01, .03, .1],
     'reg_lambda': [0, .0001, .001, .003, .01, .03, .1],
-    'learning_rate': [.0001, .001, .003, .01, .03, 0.08, .1], # NB: Use 'range' or something similar
-    'num_leaves': [27, 29, 31, 32],  # We should let it be smaller than 2^(max_depth)
+    'learning_rate': [.0001, .001, .01, 0.08, .1],
+    'num_leaves': [25, 29, 31, 33, 37, 60],  # We should let it be smaller than 2^(max_depth)
+    'min_child_weight': [0.001, 0.01, 0.1, 1, 5],
 }
 
 
