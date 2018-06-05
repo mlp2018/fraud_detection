@@ -70,8 +70,7 @@ def _preprocess_common(df):
     
     logging.info('squaring clicks (hours)')
     df['hour_sq'] = df['hour']*df['hour']
-    #print( df.info() )
-    
+    #print( df.info() )    
     
     logging.info('group by : ip_day_freq_h')
     gp = df[['ip', 'day', 'freq_h', 'channel']].groupby(by=['ip', 'day',
@@ -138,7 +137,8 @@ def _preprocess_common(df):
 
 def preprocess_confidence(train_df, test_df):
     """
-    Feature creation that should be done given training data and then merged wiht test data.
+    Feature creation that should be done given training data and then merged \
+    with test data.
     """
     ATTRIBUTION_CATEGORIES = [
         # V1 Features #
@@ -169,9 +169,10 @@ def preprocess_confidence(train_df, test_df):
 
         # Group sizes
         group_sizes = group_object.size()
-        log_group = np.log(100000)  # 1000 views -> 60% confidence, 100 views -> 40% confidence
+        log_group = np.log(100000)
         logging.info(
-        "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. Group Max /Mean / Median / Min: {} / {} / {} / {}".format(
+        "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
+        Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
             cols, new_feature,
             group_sizes.max(),
             np.round(group_sizes.mean(), 2),
@@ -183,9 +184,9 @@ def preprocess_confidence(train_df, test_df):
         def rate_calculation(x):
             """Calculate the attributed rate. Scale by confidence"""
             rate = x.sum() / float(x.count())
-            conf = np.min([1, np.log(x.count()) / log_group])
-            #if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
-            #    rate = np.nan # however this does not yield same performance as the weighting.
+            conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
+            # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+            # rate = np.nan # however this does not yield same performance as the weighting.
             return rate * conf
 
         # Perform the merge of new features with validation data set
@@ -252,4 +253,3 @@ def load_test(filename):
     called for test data preprocessing.
     """
     return _preprocess_common(load_test_raw(filename))
-
