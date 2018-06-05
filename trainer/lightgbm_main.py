@@ -159,7 +159,6 @@ def main():
     if args.test_file is not None:
         test_df = pp.load_test_raw(args.test_file)
 
-    # Column we're trying to predict
     target = 'is_attributed'
     
     # Check if optimal parameter values have been established

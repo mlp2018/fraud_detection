@@ -136,7 +136,7 @@ def preprocess_common(df):
     return( df )
 
 
-def preprocess_confidence(train_df, test_df):
+def preprocess_confidence(train_df, test_df=None):
     """
     Feature creation that should be done given training data and then merged wiht test data.
     """
@@ -188,7 +188,7 @@ def preprocess_confidence(train_df, test_df):
             #    rate = np.nan # however this does not yield same performance as the weighting.
             return rate * conf
 
-        # Perform the merge of new features with validation data set
+        # Perform the merge
         train_df = train_df.merge(
             group_object['is_attributed']. \
                 apply(rate_calculation). \
@@ -201,18 +201,19 @@ def preprocess_confidence(train_df, test_df):
         )
 
         # Perform the merge of new features with test data set
-        test_df = test_df.merge(
-            group_object['is_attributed']. \
-                apply(rate_calculation). \
-                reset_index(). \
-                rename(
-                index=str,
-                columns={'is_attributed': new_feature}
-            )[cols + [new_feature]],
-            on=cols, how='left'
-        )
-        # replace nans by average of column
-        test_df = test_df.fillna(test_df.mean())
+        if test_df is not None:
+            test_df = test_df.merge(
+                group_object['is_attributed']. \
+                    apply(rate_calculation). \
+                    reset_index(). \
+                    rename(
+                    index=str,
+                    columns={'is_attributed': new_feature}
+                )[cols + [new_feature]],
+                on=cols, how='left'
+            )
+            # replace nans by average of column
+            test_df = test_df.fillna(test_df.mean())
     return train_df, test_df
 
 
