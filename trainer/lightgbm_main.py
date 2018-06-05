@@ -140,6 +140,7 @@ def main():
 
     valid_df = None
     test_df = None
+    
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)

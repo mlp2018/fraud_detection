@@ -19,6 +19,7 @@
 from __future__ import absolute_import, division, print_function
 import json
 import logging
+import os
 from os import path
 
 import lightgbm as lgb
@@ -54,9 +55,7 @@ LGBM_PARAMS = {
 }
 
 
-
 # Parameters to be optimized
-
 LGBM_PARAM_GRID = {
     'scale_pos_weight': [100, 500, 1000, 5000],
     'min_data_in_leaf': [20, 100, 300, 500, 700, 900, 1100, 1300, 2000], # TODO: Why is this name different from 'min_child_samples'?
@@ -68,7 +67,6 @@ LGBM_PARAM_GRID = {
     'num_leaves': [25, 29, 31, 33, 37, 60],  # We should let it be smaller than 2^(max_depth)
     'min_child_weight': [0.001, 0.01, 0.1, 1, 5],
 }
-
 
 
 def lgb_gridsearch(default_params, param_grid, training_data, predictors, 
@@ -92,7 +90,6 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     }
 
     # If we're given some validation data, we can use it for early stopping    
-    #TODO: Is this relevant?
     if validation_data is not None:
 
         fit_params['eval_set'] = [(validation_data[predictors].values,
@@ -150,7 +147,10 @@ def main():
     
     # Write best parameters to file
     output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
-       
+    
+    if not os.path.exists(args.job_dir):
+        os.makedirs(args.job_dir)
+    
     with open(output_file, "w") as param_file:
         json.dump(best_params, param_file)
         
