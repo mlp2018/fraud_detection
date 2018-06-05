@@ -34,13 +34,14 @@ DTYPES = {
 
 # Columns our predictions are based on
 predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-              'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
-              'count_ip_hh_app', 'count_ip_hour_device', 'ip_confRate',
-              'app_confRate','device_confRate', 'os_confRate', 'channel_confRate',
+              'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
+              'count_ip_hour_device', 'ip_confRate', 'app_confRate',
+              'device_confRate', 'os_confRate', 'channel_confRate',
               'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
-              'channel_os_confRate', 'channel_device_confRate', 'os_device_confRate']
+              'channel_os_confRate', 'channel_device_confRate', 
+              'os_device_confRate']
 categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-               'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
+               'count_ip_day_hour', 'count_ip_hour_os', 
                'count_ip_hh_app', 'count_ip_hour_device']
     
 
@@ -49,41 +50,18 @@ def _preprocess_common(df):
     Data transformations that should be done to both training and test data.
     """
     logging.info('Modifying variables')
-        
-    #We have most and least freq hours observed in test data as below
-    most_freq_hours_in_test_data = [4, 5, 9, 10, 13, 14]
-    least_freq_hours_in_test_data = [6, 11, 15]
     
+    # Get hour and day from clicktime        
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('uint8')
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype('uint8')
     df.drop(['click_time'], axis=1, inplace=True)
     gc.collect()
     #print(df['hour'].value_counts(sort = True, ascending = True))
     
-    #If hour is in most frequent hours in test data then assign group 1, 
-    #If hour is in least frequent hours in test data then assign group 2, 
-    #assign group 3 to any remaining hours    
-    df['freq_h'] = (   3 
-                         - 2*df['hour'].isin(  most_freq_hours_in_test_data ) 
-                         - 1*df['hour'].isin( least_freq_hours_in_test_data ) ).astype('uint8')
-    #print( df.info() )
-    
     logging.info('squaring clicks (hours)')
     df['hour_sq'] = df['hour']*df['hour']
     #print( df.info() )    
     
-    logging.info('group by : ip_day_freq_h')
-    gp = df[['ip', 'day', 'freq_h', 'channel']].groupby(by=['ip', 'day',
-             'freq_h'])[['channel']].count().reset_index().rename(index=str, 
-             columns={'channel': 'count_ip_day_freq_h'})
-    df = df.merge(gp, on=['ip','day','freq_h'], how='left')
-    del gp
-    df.drop(['freq_h'], axis=1, inplace=True)
-    #print( "count_ip_day_freq_h max value = ", df.count_ip_day_freq_h.max() )
-    df['count_ip_day_freq_h'] = df['count_ip_day_freq_h'].astype('uint32')
-    gc.collect()
-    #print( df.info() )
-
     logging.info('group by : ip_day_hour')
     gp = df[['ip', 'day', 'hour', 'channel']].groupby(by=['ip', 'day', 
              'hour'])[['channel']].count().reset_index().rename(index=str, 
@@ -132,7 +110,7 @@ def _preprocess_common(df):
     gc.collect()
     #print( df.info() )    
     #print(df.describe())
-    return( df )
+    return df
 
 
 # Aggregation function
