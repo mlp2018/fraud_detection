@@ -10,6 +10,8 @@ import json
 import logging
 import os
 from sklearn.metrics import roc_auc_score
+from lightgbm import plot_importance
+from matplotlib import pyplot
 
 # Default parameters
 LGBM_PARAMS = {
@@ -102,6 +104,10 @@ default ones...')
     gbm = lgbm.lgb_train(lgb_params, train_df, pp.predictors, target,
                     categorical_features=pp.categorical,
                     validation_data=valid_df)
+
+    # plot feature importance
+    plot_importance(gbm)
+    pyplot.show()
 
     feature_importance(gbm, train_df, valid_df, target, pp.predictors, pp.categorical, lgb_params)
 
