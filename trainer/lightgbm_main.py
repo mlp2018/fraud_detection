@@ -87,10 +87,15 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    scores = cross_val_score(gbm, training_data[predictors].values,
+    for train_index, test_index in skf.split(X, y):
+      #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
+        X_train, X_test = training_data[train_index], training_data[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        gbm = lgb_train (gbm, training_data[predictors].values,
                              training_data[target].values,
-                             scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
-                             fit_params=fit_params)
+                             scoring='roc_auc')
+        score =eval(gbm,)
     
     return scores.mean()
 
