@@ -135,19 +135,16 @@ def main():
 
     logging.info('Preprocessing...')
     
-    # Load training data set, i.e. "the 90%"
+    # Load the training data, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
     train_df = pp.preprocess_confidence(train_df)
-
-    valid_df = None
-    test_df = None
-    
-    # Load validation data set, i.e. "the 10%"
+      
+    # Load the validation data, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
         valid_df = pp.preprocess_confidence(train_df, valid_df)
         
-    # Load the test data set, i.e. data for which we need to make predictions
+    # Load the test data set, i.e. the data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test(args.test_file)
         test_df = pp.preprocess_confidence(train_df, test_df)
@@ -207,7 +204,7 @@ default ones...')
         json.dump(lgb_params, param_file)
 
     # Make predictions and save to file
-    if test_df is not None:
+    if args.test_file is not None:
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[pp.predictors])
         predictions_file = path.join(args.job_dir, 'predictions.csv')

@@ -135,6 +135,18 @@ def _preprocess_common(df):
     return( df )
 
 
+# Aggregation function
+def rate_calculation(x):
+    """This function is called from within the preprocess_confidence function \
+    and calculates the attributed rate and scales it by confidence."""
+    log_group = np.log(100000)
+    rate = x.sum() / float(x.count())
+    conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
+    # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+    # rate = np.nan # however this does not yield same performance as the weighting.
+    return rate * conf
+
+
 def preprocess_confidence(train_df, test_df=None):
     """
     Feature creation that should be done given training data and then merged \
@@ -159,37 +171,31 @@ def preprocess_confidence(train_df, test_df=None):
     ]
 
     # Find frequency of is_attributed for each unique value in column
-    freqs = {}
+    logging.info("Calculating new features: Confidence rates...")
     for cols in ATTRIBUTION_CATEGORIES:
         
         # New feature name
         new_feature = '_'.join(cols) + '_confRate'
+        logging.info(new_feature)
         
         # Perform the groupby
         group_object = train_df.groupby(cols)
         
         # Group sizes
         group_sizes = group_object.size()
-        log_group = np.log(100000)
-        logging.info(
-        "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
-        Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
-            cols, new_feature,
-            group_sizes.max(),
-            np.round(group_sizes.mean(), 2),
-            np.round(group_sizes.median(), 2),
-            group_sizes.min()
-        ))
-
-        # Aggregation function
-        def rate_calculation(x):
-            """Calculate the attributed rate. Scale by confidence"""
-            rate = x.sum() / float(x.count())
-            conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
-            # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
-            # rate = np.nan # however this does not yield same performance as the weighting.
-            return rate * conf
         
+        # Print group size descriptives once
+        if test_df is None:
+            logging.info(
+            "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
+            Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
+                cols, new_feature,
+                group_sizes.max(),
+                np.round(group_sizes.mean(), 2),
+                np.round(group_sizes.median(), 2),
+                group_sizes.min()
+            ))
+
         # Merge function
         def merge_new_features(group_object, df):
             df = df.merge(
