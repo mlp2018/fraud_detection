@@ -137,7 +137,9 @@ def main():
     
     # Load training data set, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
-    
+
+    valid_df = None
+    test_df = None
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
@@ -176,7 +178,7 @@ default ones...')
     logging.info('Score: {}'.format(score))
     
     #correlation matrix of data
-    corr = pp.correlation_matrix(train_df)
+    corr = pp.correlation_matrix(train_df[pp.predictors])
     print(corr)
 
     # Train the final model on all data
