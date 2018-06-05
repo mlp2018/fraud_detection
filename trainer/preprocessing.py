@@ -161,12 +161,13 @@ def preprocess_confidence(train_df, test_df=None):
     # Find frequency of is_attributed for each unique value in column
     freqs = {}
     for cols in ATTRIBUTION_CATEGORIES:
+        
         # New feature name
         new_feature = '_'.join(cols) + '_confRate'
-
+        
         # Perform the groupby
         group_object = train_df.groupby(cols)
-
+        
         # Group sizes
         group_sizes = group_object.size()
         log_group = np.log(100000)
@@ -188,9 +189,10 @@ def preprocess_confidence(train_df, test_df=None):
             # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
             # rate = np.nan # however this does not yield same performance as the weighting.
             return rate * conf
-
-        # Perform the merge
-        train_df = train_df.merge(
+        
+        # Merge function
+        def merge_new_features(group_object, df):
+            df = df.merge(
             group_object['is_attributed']. \
                 apply(rate_calculation). \
                 reset_index(). \
@@ -199,23 +201,24 @@ def preprocess_confidence(train_df, test_df=None):
                 columns={'is_attributed': new_feature}
             )[cols + [new_feature]],
             on=cols, how='left'
-        )
-
-        # Perform the merge of new features with test data set
-        if test_df is not None:
-            test_df = test_df.merge(
-                group_object['is_attributed']. \
-                    apply(rate_calculation). \
-                    reset_index(). \
-                    rename(
-                    index=str,
-                    columns={'is_attributed': new_feature}
-                )[cols + [new_feature]],
-                on=cols, how='left'
             )
-            # replace nans by average of column
-            test_df = test_df.fillna(test_df.mean())
-    return train_df, test_df
+                
+            # Replace NaNs by average of column
+            df = df.fillna(df.mean())
+            
+            return df
+            
+        # Perform the merge
+        if test_df is None:
+            train_df = merge_new_features(group_object, train_df)
+        elif test_df is not None:
+            test_df = merge_new_features(group_object, test_df)
+            
+    # Return the relevant data frame
+    if test_df is None:
+        return train_df
+    elif test_df is not None:
+        return test_df
 
 
 def correlation_matrix(df):
