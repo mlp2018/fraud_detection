@@ -145,12 +145,12 @@ def main():
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
-        _, valid_df = pp.preprocess_confidence(train_df, **valid_df)
+        _, valid_df = pp.preprocess_confidence(train_df, valid_df)
         
     # Load the test data set, i.e. data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test(args.test_file)
-        _, test_df = pp.preprocess_confidence(train_df, **test_df)
+        _, test_df = pp.preprocess_confidence(train_df, test_df)
     
     # Column we're trying to predict
     target = 'is_attributed'
