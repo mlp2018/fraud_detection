@@ -25,11 +25,13 @@ from os import path
 
 import lightgbm as lgb
 import pandas as pd
+import numpy as np
 
 from trainer.cross_validation import cross_val_score
 from sklearn.model_selection import StratifiedKFold
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
+from sklearn.metrics import roc_auc_score
 
 
 # Default parameters
@@ -76,27 +78,34 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
         'categorical_feature': categorical_features,
         # 'callbacks': [lgb.print_evaluation(period=10)]
     }
-    
-    # If we're given some validation data, we can use it for early stopping    
-    if validation_data is not None:
-        fit_params['eval_set'] = [(validation_data[predictors].values,
-                                   validation_data[target].values)]
-        fit_params['early_stopping_rounds'] = early_stopping_rounds
-        fit_params['eval_metric'] = 'auc'
 
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
+    scores = []
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    for train_index, test_index in skf.split(X, y):
+    for train_index, test_index in skf.split(np.zeros(training_data.shape[0]), training_data[target]):
+        fold = 1
       #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
-        X_train, X_test = training_data[train_index], training_data[test_index]
-        y_train, y_test = y[train_index], y[test_index]
+        train = training_data.iloc[train_index]
+        test = training_data.iloc[test_index]
+        train_df = pp.preprocess_confidence(pp.preprocess_common(train))
+        test_df = pp.preprocess_confidence(pp.preprocess_common(test))
+        valid_df = pp.preprocess_confidence(pp.preprocess_common(validation_data))
 
-        gbm = lgb_train (gbm, training_data[predictors].values,
-                             training_data[target].values,
-                             scoring='roc_auc')
-        score =eval(gbm,)
-    
+        # If we're given some validation data, we can use it for early stopping
+        if validation_data is not None:
+            fit_params['eval_set'] = [(valid_df[predictors].values,
+                                       valid_df[target].values)]
+            fit_params['early_stopping_rounds'] = early_stopping_rounds
+            fit_params['eval_metric'] = 'auc'
+
+        gbm = lgb_train(lgb_params, train_df, predictors, target,
+                        categorical_features=categorical,validation_data=validation_data)
+
+        y_hat = gbm.predict(test_df[predictors].values)
+        score = roc_auc_score(test[target].values, y_hat)
+        print("fold=%d, auc: %.2f%%" % (fold, score))
+        scores.append(score)
     return scores.mean()
 
 
@@ -141,21 +150,15 @@ def main():
     logging.info('Preprocessing...')
     
     # Load training data set, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
-
-    valid_df = None
-    test_df = None
+    train_df = pp.load_train_raw(args.train_file)
     
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
-        valid_df = pp.load_train(args.valid_file)
-        train_df, valid_df = pp.preprocess_confidence(train_df, valid_df)
-        
+        valid_df = pp.load_train_raw(args.valid_file)
     # Load the test data set, i.e. data for which we need to make predictions
     if args.test_file is not None:
-        test_df = pp.load_test(args.test_file)
-        train_df, test_df = pp.preprocess_confidence(train_df, test_df)
-    
+        test_df = pp.load_test_raw(args.test_file)
+
     # Column we're trying to predict
     target = 'is_attributed'
     
@@ -211,7 +214,7 @@ default ones...')
         json.dump(lgb_params, param_file)
 
     # Make predictions and save to file
-    if test_df is not None:
+    if args.test_df is not None:
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[pp.predictors])
         predictions_file = path.join(args.job_dir, 'predictions.csv')

@@ -44,7 +44,7 @@ categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
                'count_ip_hh_app', 'count_ip_hour_device']
     
 
-def _preprocess_common(df):
+def preprocess_common(df):
     """
     Data transformations that should be done to both training and test data.
     """
