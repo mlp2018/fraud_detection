@@ -88,9 +88,8 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
       #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
         train = training_data.iloc[train_index]
         test = training_data.iloc[test_index]
-        train_df = pp.preprocess_confidence(pp.preprocess_common(train))
-        test_df = pp.preprocess_confidence(pp.preprocess_common(test))
-        valid_df = pp.preprocess_confidence(pp.preprocess_common(validation_data))
+        train_df, test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
+                                                               pp.preprocess_common(validation_data))
 
         # If we're given some validation data, we can use it for early stopping
         if validation_data is not None:
@@ -100,7 +99,7 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
             fit_params['eval_metric'] = 'auc'
 
         gbm = lgb_train(lgb_params, train_df, predictors, target,
-                        categorical_features=categorical,validation_data=validation_data)
+                        categorical_features=categorical_features, validation_data=validation_data)
 
         y_hat = gbm.predict(test_df[predictors].values)
         score = roc_auc_score(test[target].values, y_hat)

@@ -136,7 +136,7 @@ def preprocess_common(df):
     return( df )
 
 
-def preprocess_confidence(train_df, test_df=None):
+def preprocess_confidence(train_df, test_df=None, valid_df=None):
     """
     Feature creation that should be done given training data and then merged wiht test data.
     """
@@ -213,8 +213,23 @@ def preprocess_confidence(train_df, test_df=None):
                 on=cols, how='left'
             )
             # replace nans by average of column
-            test_df = test_df.fillna(test_df.mean())
-    return train_df, test_df
+            test_df = test_df.fillna(train_df.mean())
+
+            # Perform the merge of new features with validation data set
+        if valid_df is not None:
+            valid_df = valid_df.merge(
+                    group_object['is_attributed']. \
+                    apply(rate_calculation). \
+                    reset_index(). \
+                    rename(
+                    index=str,
+                    columns={'is_attributed': new_feature}
+                )[cols + [new_feature]],
+            on=cols, how='left'
+            )
+            # replace nans by average of column
+            valid_df = valid_df.fillna(train_df.mean())
+    return train_df, test_df, valid_df
 
 
 def correlation_matrix(df):
