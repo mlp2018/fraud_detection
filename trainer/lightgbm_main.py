@@ -161,6 +161,7 @@ def main():
     # Check if optimal parameter values have been established
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
     
+    # Provide parameter values
     lgb_params = deepcopy(LGBM_PARAMS)
     if os.path.isfile(optim_file):
         with open(optim_file, "r") as optim_file:
@@ -175,31 +176,40 @@ ones...')
         logging.info('No optimized parameter values found, so using the \
 default ones...')
     
-    # Run cross-validation
-    logging.info('Cross-validation part...')
-    score = lgb_cv(lgb_params, train_df, pp.predictors, target,
-                   categorical_features=pp.categorical, n_splits=5,
-                   validation_data=valid_df)
-    logging.info('Score: {}'.format(score))
+    if args.run == 'optimization':
     
-    #correlation matrix of data
-    corr = pp.correlation_matrix(train_df[pp.predictors])
-    print(corr)
-
-    # Train the final model on all data
-    logging.info('Training on all data...')
-    gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
-                    categorical_features=pp.categorical,
-                    validation_data=valid_df)
-
-    # Check if job-dir exists, and if not, create it
-    if not path.exists(args.job_dir):
-        os.makedirs(args.job_dir)
+        # Run cross-validation
+        logging.info('Cross-validation part...')
+        score = lgb_cv(lgb_params, train_df, pp.predictors, target,
+                       categorical_features=pp.categorical, n_splits=5,
+                       validation_data=valid_df)
+        logging.info('Average score across the folds: {}'.format(score))
         
-    # Save model to file
-    model_file = path.join(args.job_dir, 'model.txt')
-    logging.info('Saving trained model to {!r}...'.format(model_file))
-    gbm.booster_.save_model(model_file)
+    elif args.run == 'submission':
+
+        # Train the final model on all data
+        logging.info('Training on all data...')
+        gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
+                        categorical_features=pp.categorical,
+                        validation_data=valid_df)
+
+        # Check if job-dir exists, and if not, create it
+        if not path.exists(args.job_dir):
+            os.makedirs(args.job_dir)
+            
+        # Save model to file
+        model_file = path.join(args.job_dir, 'model.txt')
+        logging.info('Saving trained model to {!r}...'.format(model_file))
+        gbm.booster_.save_model(model_file)
+
+        # Make predictions and save to file
+        if args.test_file is not None:
+            logging.info('Making predictions...')
+            predictions = gbm.predict(test_df[pp.predictors])
+            predictions_file = path.join(args.job_dir, 'predictions.csv')
+            logging.info('Saving predictions to {!r}...'.format(predictions_file))
+            pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
+                          predictions}).to_csv(predictions_file, index=False)
     
     # Write parameter values to file
     output_file = path.join(args.job_dir, 'used_param_values.txt')
@@ -208,15 +218,10 @@ default ones...')
     with open(output_file, "w") as param_file:
         json.dump(lgb_params, param_file)
 
-    # Make predictions and save to file
-    if args.test_file is not None:
-        logging.info('Making predictions...')
-        predictions = gbm.predict(test_df[pp.predictors])
-        predictions_file = path.join(args.job_dir, 'predictions.csv')
-        logging.info('Saving predictions to {!r}...'.format(predictions_file))
-        pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                      predictions}).to_csv(predictions_file, index=False)
-    
+    # Correlation matrix of data
+    corr = pp.correlation_matrix(train_df[pp.predictors])
+    print(corr)
+
     
 # Run code
 if __name__ == '__main__':
