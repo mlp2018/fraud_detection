@@ -145,11 +145,15 @@ def main():
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
         valid_df = pp.preprocess_confidence(train_df, valid_df)
+    else:
+        valid_df = None
         
     # Load the test data set, i.e. the data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test(args.test_file)
         test_df = pp.preprocess_confidence(train_df, test_df)
+    else:
+        test_df = None
     
     # Column we're trying to predict
     target = 'is_attributed'
@@ -188,7 +192,6 @@ default ones...')
                     categorical_features=pp.categorical,
                     validation_data=valid_df)
 
-
     # Check if job-dir exists, and if not, create it
     if not path.exists(args.job_dir):
         os.makedirs(args.job_dir)
@@ -213,6 +216,7 @@ default ones...')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
         pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
                       predictions}).to_csv(predictions_file, index=False)
+    
     
 # Run code
 if __name__ == '__main__':
