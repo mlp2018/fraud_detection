@@ -31,6 +31,7 @@ from trainer.cross_validation import cross_val_score
 from sklearn.model_selection import StratifiedKFold
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
+import trainer.plotting_functions as myplot
 from sklearn.metrics import roc_auc_score
 
 
@@ -102,7 +103,9 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
                         categorical_features=categorical_features, validation_data=valid_df)
 
         y_hat = gbm.predict(test_df[predictors].values)
+
         score = roc_auc_score(test[target].values, y_hat)
+        myplot.plot_roc_curve(test[target].values, y_hat, score)
         print("fold=%d, auc: %.2f%%" % (fold, score))
         scores.append(score)
     return np.mean(scores)
