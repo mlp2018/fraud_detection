@@ -99,13 +99,13 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
             fit_params['eval_metric'] = 'auc'
 
         gbm = lgb_train(lgb_params, train_df, predictors, target,
-                        categorical_features=categorical_features, validation_data=validation_data)
+                        categorical_features=categorical_features, validation_data=valid_df)
 
         y_hat = gbm.predict(test_df[predictors].values)
         score = roc_auc_score(test[target].values, y_hat)
         print("fold=%d, auc: %.2f%%" % (fold, score))
         scores.append(score)
-    return scores.mean()
+    return np.mean(scores)
 
 
 def lgb_train(params, training_data, predictors, target,
@@ -190,6 +190,8 @@ default ones...')
 
     # Train the final model on all data
     logging.info('Training on all data...')
+    train_df, _, valid_df = pp.preprocess_confidence(pp.preprocess_common(train_df), None,
+                                                     pp.preprocess_common(valid_df))
     gbm = lgb_train(lgb_params, train_df, pp.predictors, target,
                     categorical_features=pp.categorical,
                     validation_data=valid_df)
@@ -213,6 +215,7 @@ default ones...')
 
     # Make predictions and save to file
     if args.test_df is not None:
+        _, test_df, _ = pp.preprocess_confidence(pp.preprocess_common(train_df), pp.preprocess_common(test_df))
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[pp.predictors])
         predictions_file = path.join(args.job_dir, 'predictions.csv')

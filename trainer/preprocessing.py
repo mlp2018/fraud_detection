@@ -33,13 +33,13 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+predictors = ['ip', 'app', 'device', 'os', 'channel', 'hour', 'hour_sq',
               'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
               'count_ip_hh_app', 'count_ip_hour_device', 'ip_confRate',
               'app_confRate','device_confRate', 'os_confRate', 'channel_confRate',
               'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
               'channel_os_confRate', 'channel_device_confRate', 'os_device_confRate']
-categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+categorical = ['ip', 'app', 'device', 'os', 'channel', 'hour', 'hour_sq',
                'count_ip_day_freq_h', 'count_ip_day_hour', 'count_ip_hour_os', 
                'count_ip_hh_app', 'count_ip_hour_device']
     
@@ -259,7 +259,7 @@ def load_train(filename):
     Reads and preprocesses labeled data from `filename`. This method should be
     called for both training and validation data.
     """
-    return _preprocess_common(load_train_raw(filename))
+    return preprocess_common(load_train_raw(filename))
 
 
 def load_test(filename):
@@ -267,5 +267,5 @@ def load_test(filename):
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-    return _preprocess_common(load_test_raw(filename))
+    return preprocess_common(load_test_raw(filename))
 
