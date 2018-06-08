@@ -237,7 +237,7 @@ def correlation_matrix(df):
             yticklabels=corr.columns.values)
 	plt.savefig('corr-matrix.png')
 
-print (correlation_matrix(train_df))
+correlation_matrix(train_df)
 #plot data
 train_df.boxplot()
 train_df.hist()
