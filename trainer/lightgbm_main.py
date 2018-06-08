@@ -52,7 +52,7 @@ LGBM_PARAMS = {
     'reg_lambda':         0, # L2 regularization term on weights
     'nthread':            8, # Number of threads
     'verbose':            0, # Verbosity
-    'n_estimators':       99999999, # Number of boosting iterations. Very high because of early stopping
+    'n_estimators':       2000, # Number of boosting iterations. Very high because of early stopping
 	 'scale_pos_weight':   1, # Weight of the positive class in binary classification
 }
 
