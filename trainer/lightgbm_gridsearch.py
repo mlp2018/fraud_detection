@@ -106,7 +106,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
 # =============================================================================
     grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
                               cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
-                              fit_params=fit_params, n_iter=1000)
+                              fit_params=fit_params, n_iter=3)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
@@ -153,16 +153,19 @@ def main():
                                  categorical_features=pp.categorical, 
                                  n_splits=5, validation_data=valid_df)
     
-    # Write best parameters to file
-    output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
-    
+    # Check whether job-dir exists    
     if not os.path.exists(args.job_dir):
         os.makedirs(args.job_dir)
-    
-    with open(output_file, "w") as param_file:
-        json.dump(best_params, param_file)
-        
 
+    # Write best hyperparameter values to file
+    output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
+    logging.info('Saving the optimal hyperparameter values to {!r}...'
+                 .format(output_file))
+    with pp.open_dispatching(output_file, mode='wb') as f:
+        json.dump(best_params, f)
+    
+    
 # Run code    
 if __name__ == '__main__':
     main()
+    

@@ -222,15 +222,15 @@ default ones...')
     if test_df is not None:
         logging.info('Making predictions...')
         predictions = gbm.predict(test_df[pp.predictors])
-        predictions_file = path.join(args.job_dir, 'predictions.txt')
+        predictions_file = path.join(args.job_dir, 'predictions.csv')
         logging.info('Saving predictions to {!r}...'.format(predictions_file))
         with pp.open_dispatching(predictions_file, mode='wb') as f:
             pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                          predictions}).to_csv(f)
+                          predictions}).to_csv(f, index=False)
 
     # Correlation matrix of data
-    corr = pp.correlation_matrix(train_df[pp.predictors])
-    print(corr)
+    #corr = pp.correlation_matrix(train_df[pp.predictors])
+    #print(corr)
 
 # Run code
 if __name__ == '__main__':
