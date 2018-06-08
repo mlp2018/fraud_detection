@@ -99,7 +99,8 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     # Instantiate the grid
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
-                        scoring='roc_auc', n_jobs=1, verbose=1, fit_params=fit_params)
+                        scoring='roc_auc', n_jobs=1, verbose=1, 
+                        fit_params=fit_params)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
