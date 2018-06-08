@@ -235,7 +235,7 @@ def correlation_matrix(df):
     sns.heatmap(corr, 
             xticklabels=corr.columns.values,
             yticklabels=corr.columns.values)
-    plt.show()
+	plt.savefig('corr-matrix.png')
 
 print (correlation_matrix(train_df))
 #plot data
