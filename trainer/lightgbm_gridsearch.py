@@ -63,7 +63,7 @@ LGBM_PARAM_GRID = {
     'min_data_in_leaf': [10, 20, 100, 1000],
     'max_depth': [-1, 6, 12],
     'subsample': [0.3, 0.6, 1],
-    'colsample_by_tree': [0.3, 0.6, 1],
+    'colsample_bytree': [0.3, 0.6, 1],
     'min_child_weight': [0.001, 0.01, 0.1, 1, 5],
     'scale_pos_weight': [1, 10, 100, 1000],
 }
