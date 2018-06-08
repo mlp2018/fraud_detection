@@ -106,7 +106,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
 # =============================================================================
     grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
                               cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
-                              fit_params=fit_params, n_iter=10)
+                              fit_params=fit_params, n_iter=1000)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
