@@ -133,12 +133,22 @@ def prep_data( df ):
     gc.collect()
     print( df.info() )
 
-    df.drop( ['ip','day'], axis=1, inplace=True )
+    df.drop( ['day'], axis=1, inplace=True )
     gc.collect()
     print( df.info() )    
     print(df.describe())
     return( df )
 
+# Aggregation function
+def rate_calculation(x):
+    """This function is called from within the preprocess_confidence function \
+    and calculates the attributed rate and scales it by confidence."""
+    log_group = np.log(100000)
+    rate = x.sum() / float(x.count())
+    conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
+    # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+    # rate = np.nan # however this does not yield same performance as the weighting.
+    return rate * conf
 
 def preprocess_confidence(train_df, test_df=None):
     """
@@ -164,12 +174,11 @@ def preprocess_confidence(train_df, test_df=None):
     ]
 
     # Find frequency of is_attributed for each unique value in column
-    logging.info("Calculating new features: Confidence rates...")
     for cols in ATTRIBUTION_CATEGORIES:
         
         # New feature name
         new_feature = '_'.join(cols) + '_confRate'
-        logging.info(new_feature)
+        print(new_feature)
         
         # Perform the groupby
         group_object = train_df.groupby(cols)
@@ -179,7 +188,7 @@ def preprocess_confidence(train_df, test_df=None):
         
         # Print group size descriptives once
         if test_df is None:
-            logging.info(
+            print(
             "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
             Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
                 cols, new_feature,
@@ -235,7 +244,7 @@ def correlation_matrix(df):
     sns.heatmap(corr, 
             xticklabels=corr.columns.values,
             yticklabels=corr.columns.values)
-	plt.savefig('corr-matrix.png')
+    plt.savefig('corr-matrix.png')
 
 correlation_matrix(train_df)
 #plot data
