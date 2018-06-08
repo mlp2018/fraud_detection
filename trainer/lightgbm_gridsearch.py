@@ -24,6 +24,7 @@ from os import path
 
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import StratifiedKFold
 
 import trainer.lightgbm_functions as lf
@@ -98,9 +99,14 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     
     # Instantiate the grid
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
-                        scoring='roc_auc', n_jobs=1, verbose=1, 
-                        fit_params=fit_params)
+# =============================================================================
+#     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
+#                         scoring='roc_auc', n_jobs=1, verbose=1, 
+#                         fit_params=fit_params)
+# =============================================================================
+    grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
+                              cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
+                              fit_params=fit_params, n_iter=10)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
@@ -126,15 +132,16 @@ def main():
 
     logging.info('Preprocessing...')
     
-    # Load training data set, i.e. "the 90%"
+    # Load the training data, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
-    
-    # Load validation data set, i.e. "the 10%"
-    valid_df = pp.load_train(args.valid_file) if args.valid_file is not None \
-        else None
-
     train_df = pp.preprocess_confidence(train_df)
-    valid_df = pp.preprocess_confidence(train_df, valid_df)
+    
+    # Load the validation data, i.e. "the 10%"
+    if args.valid_file is not None:
+        valid_df = pp.load_train(args.valid_file)
+        valid_df = pp.preprocess_confidence(train_df, valid_df)
+    else:
+        valid_df = None
     
     # Column we're trying to predict
     target = 'is_attributed'
