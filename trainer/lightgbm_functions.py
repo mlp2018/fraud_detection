@@ -43,8 +43,14 @@ def make_args_parser():
       '--test-file', help='Path to test data', required=False)
     parser.add_argument(
         '--job-dir',
-        help='Directory where to store checkpoints and exported models.',
+        help='Directory where to store checkpoints and exported models',
         default='.')
+    parser.add_argument(
+      '--run', 
+      help='Choose <optimization> to run the cross-validation, or \
+      <submission> to train on all the training data',
+      choices = ['optimization', 'submission'],
+      required=True)
     parser.add_argument(
         '--log', help='Logging level', default=logging.DEBUG,
         action=StoreLoggingLevel)
