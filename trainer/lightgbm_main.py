@@ -138,7 +138,8 @@ def main():
     logging.info('Preprocessing...')
 
     # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
+    train_df = pp.load_train(args.train_file, int(args.number_lines)
+        if args.number_lines is not None else None)
     train_df = pp.preprocess_confidence(train_df)
 
     # Load the validation data, i.e. "the 10%"

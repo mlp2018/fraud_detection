@@ -42,6 +42,8 @@ def make_args_parser():
     parser.add_argument(
       '--test-file', help='Path to test data', required=False)
     parser.add_argument(
+      '--number-lines', help='Number of lines to use.', required=False)
+    parser.add_argument(
         '--job-dir',
         help='Directory where to store checkpoints and exported models',
         default='.')
