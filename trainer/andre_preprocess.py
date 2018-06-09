@@ -38,7 +38,7 @@ dtypes = {
 
 print('load train...')
 train_cols = ['ip','app','device','os', 'channel', 'click_time', 'is_attributed']
-train_df = pd.read_csv(path+"train_sample.csv", dtype=dtypes, usecols=train_cols)
+train_df = pd.read_csv(path+"train.csv", dtype=dtypes, usecols=train_cols)
 
 import gc
 
