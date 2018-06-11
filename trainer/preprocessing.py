@@ -36,13 +36,13 @@ DTYPES = {
 
 # Columns our predictions are based on
 predictors = ['app', 'device', 'channel', 'hour_sq',
-              'count_ip_day_hour', 'count_ip_hour', 'count_ip_hh_app', 
+              'count_ip_day_hour', 'count_ip_hh_app',
               'count_ip_hour_device', 'ip_confRate', 'app_confRate',
               'device_confRate', 'channel_confRate',
               'app_channel_confRate', 'app_device_confRate',
               'channel_device_confRate']
 categorical = ['app', 'device', 'channel', 'hour_sq',
-               'count_ip_day_hour', 'count_ip_hour', 
+               'count_ip_day_hour',
                'count_ip_hh_app', 'count_ip_hour_device']
 
 
@@ -79,17 +79,6 @@ def _preprocess_common(df):
     del gp
     #print( "count_ip_day_hour max value = ", df.count_ip_day_hour.max() )
     df['count_ip_day_hour'] = df['count_ip_day_hour'].astype('uint16')
-    gc.collect()
-    #print( df.info() )
-
-    logging.info('group by : ip_hour')
-    gp = df[['ip', 'day', 'hour', 'channel']].groupby(by=['ip', 'day',
-             'hour'])[['channel']].count().reset_index().rename(index=str,
-             columns={'channel': 'count_ip_hour'})
-    df = df.merge(gp, on=['ip','hour','day'], how='left')
-    del gp
-    #print( "count_ip_hour_os max value = ", df.count_ip_hour_os.max() )
-    df['count_ip_hour'] = df['count_ip_hour'].astype('uint16')
     gc.collect()
     #print( df.info() )
 
