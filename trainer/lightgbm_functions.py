@@ -51,7 +51,7 @@ def make_args_parser():
       '--run', 
       help='Choose <optimization> to run the cross-validation, or \
       <submission> to train on all the training data',
-      choices = ['optimization', 'submission'],
+      choices = ['plot','optimization', 'submission'],
       required=True)
     parser.add_argument(
         '--log', help='Logging level', default=logging.DEBUG,
