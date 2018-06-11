@@ -26,10 +26,10 @@ from os import path
 import lightgbm as lgb
 import pandas as pd
 
-from trainer.cross_validation import cross_val_score
+from cross_validation import cross_val_score
 from sklearn.model_selection import StratifiedKFold
-import trainer.lightgbm_functions as lf
-import trainer.preprocessing as pp
+import lightgbm_functions as lf
+import preprocessing as pp
 
 
 # Default parameters
@@ -177,7 +177,10 @@ ones...')
         logging.info('No optimized parameter values found, so using the \
 default ones...')
 
-    if args.run == 'optimization':
+    if args.run == 'plot':
+        pp.correlation_matrix(train_df[pp.predictors])
+
+    elif args.run == 'optimization':
 
         # Run cross-validation
         logging.info('Cross-validation part...')

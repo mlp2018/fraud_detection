@@ -18,8 +18,8 @@ import gc
 import logging
 import pandas as pd
 import numpy as np
-#import seaborn as sns
-#import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 DTYPES = {
     'ip'            : 'uint32',
@@ -35,15 +35,14 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-              'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
+predictors = ['app', 'device', 'channel', 'hour_sq',
+              'count_ip_day_hour', 'count_ip_hour', 'count_ip_hh_app', 
               'count_ip_hour_device', 'ip_confRate', 'app_confRate',
-              'device_confRate', 'os_confRate', 'channel_confRate',
-              'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
-              'channel_os_confRate', 'channel_device_confRate', 
-              'os_device_confRate']
-categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-               'count_ip_day_hour', 'count_ip_hour_os', 
+              'device_confRate', 'channel_confRate',
+              'app_channel_confRate', 'app_device_confRate',
+              'channel_device_confRate']
+categorical = ['app', 'device', 'channel', 'hour_sq',
+               'count_ip_day_hour', 'count_ip_hour', 
                'count_ip_hh_app', 'count_ip_hour_device']
 
 
@@ -83,14 +82,14 @@ def _preprocess_common(df):
     gc.collect()
     #print( df.info() )
 
-    logging.info('group by : ip_hour_os')
-    gp = df[['ip', 'day', 'os', 'hour', 'channel']].groupby(by=['ip', 'os', 'day',
+    logging.info('group by : ip_hour')
+    gp = df[['ip', 'day', 'hour', 'channel']].groupby(by=['ip', 'day',
              'hour'])[['channel']].count().reset_index().rename(index=str,
-             columns={'channel': 'count_ip_hour_os'})
-    df = df.merge(gp, on=['ip','os','hour','day'], how='left')
+             columns={'channel': 'count_ip_hour'})
+    df = df.merge(gp, on=['ip','hour','day'], how='left')
     del gp
     #print( "count_ip_hour_os max value = ", df.count_ip_hour_os.max() )
-    df['count_ip_hour_os'] = df['count_ip_hour_os'].astype('uint16')
+    df['count_ip_hour'] = df['count_ip_hour'].astype('uint16')
     gc.collect()
     #print( df.info() )
 
@@ -151,19 +150,16 @@ def preprocess_confidence(train_df, test_df=None):
     ATTRIBUTION_CATEGORIES = [
         # V1 Features #
         ###############
-        ['ip'], ['app'], ['device'], ['os'], ['channel'],
+        ['ip'], ['app'], ['device'], ['channel'],
 
         # V2 Features #
         ###############
         ['app', 'channel'],
-        ['app', 'os'],
         ['app', 'device'],
 
         # V3 Features #
         ###############
-        ['channel', 'os'],
         ['channel', 'device'],
-        ['os', 'device']
     ]
 
     # Find frequency of is_attributed for each unique value in column
@@ -228,7 +224,7 @@ def correlation_matrix(df):
     sns.heatmap(corr, 
             xticklabels=corr.columns.values,
             yticklabels=corr.columns.values)
-    plt.show()
+    plt.savefig('figures/features_correlations.png')
 
 
 def load_train_raw(filename, number_samples):
