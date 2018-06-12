@@ -237,16 +237,6 @@ def main():
     with pp.open_dispatching(output_file, mode='wb') as f:
         json.dump(lgb_params, f)
 
-    # Make predictions and save to file
-    if test_df is not None:
-        logging.info('Making predictions...')
-        predictions = gbm.predict(test_df[pp.predictors])
-        predictions_file = path.join(args.job_dir, 'predictions.csv')
-        logging.info('Saving predictions to {!r}...'.format(predictions_file))
-        with pp.open_dispatching(predictions_file, mode='wb') as f:
-            pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
-                          predictions}).to_csv(f, index=False)
-
     # Correlation matrix of data
     #corr = pp.correlation_matrix(train_df[pp.predictors])
     #print(corr)
