@@ -159,24 +159,42 @@ def main():
     # Column we're trying to predict
     target = 'is_attributed'
 
-    # Check if optimal parameter values have been established
+    # Provide default hyperparameter values
+    lgb_params = deepcopy(LGBM_PARAMS)
+
+    # Path to file with optimized hyperparameter values
     optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
 
-    # Provide parameter values
-    lgb_params = deepcopy(LGBM_PARAMS)
-    if os.path.isfile(optim_file):
-        with open(optim_file, "r") as optim_file:
-            optim_values = json.load(optim_file)
+    # When running locally, check whether optimal hyperparameter values have 
+    # been established. If yes, use those. Otherwise, use default values.
+    if args.where == 'local':
+       
+        if os.path.isfile(optim_file):
+            with open(optim_file, "r") as optim_file:
+                optim_values = json.load(optim_file)
+        
+            # Replace default values
+            logging.info('Replacing default hyperparameter values with \
+                         optimized ones...')
+            lgb_params.update(optim_values)
+    
+        else:
+            logging.info('No optimized hyperparameter values were found, so \
+                         using the default ones...')
 
-        # Replace default values
-        logging.info('Replacing default parameter values with optimized \
-ones...')
+    # When running in the cloud, replace default hyperparameter with optimal 
+    # hyperparameter values. 
+    # TODO: Implement check of whether the text file with optimized 
+    # hyperparameter values actually exists.
+    if args.where == 'cloud':
+        with pp.open_dispatching(optim_file, mode='rb') as f:
+            optim_values = json.load(f)
+        
+        logging.info('Replacing default hyperparameter values with \
+                     optimized ones...')
         lgb_params.update(optim_values)
 
-    else:
-        logging.info('No optimized parameter values found, so using the \
-default ones...')
-
+    # Optimization run: run cross-validation
     if args.run == 'optimization':
 
         # Run cross-validation
@@ -186,6 +204,7 @@ default ones...')
                        validation_data=valid_df)
         logging.info('Average score across the folds: {}'.format(score))
 
+    # Submission run: training and making predictions
     elif args.run == 'submission':
 
         # Train the final model on all data
