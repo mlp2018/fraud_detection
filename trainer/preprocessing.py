@@ -18,8 +18,8 @@ import gc
 import logging
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+#import seaborn as sns
+#import matplotlib.pyplot as plt
 
 DTYPES = {
     'ip'            : 'uint32',
@@ -29,6 +29,8 @@ DTYPES = {
     'channel'       : 'uint16',
     'is_attributed' : 'uint8',
     'click_id'      : 'uint32',
+    'hour'          : 'uint8',
+    'day'           : 'uint8',
 }
 
 
@@ -43,7 +45,15 @@ predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
 categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
                'count_ip_day_hour', 'count_ip_hour_os', 
                'count_ip_hh_app', 'count_ip_hour_device']
-    
+
+
+def reformat_click_time(df):
+    df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype(
+        DTYPES['hour'])
+    df['day'] = pd.to_datetime(df.click_time).dt.day.astype(
+        DTYPES['day'])
+    df.drop(['click_time'], axis=1, inplace=True)
+
 
 def _preprocess_common(df):
     """
@@ -63,8 +73,8 @@ def _preprocess_common(df):
     #print( df.info() )    
     
     logging.info('group by : ip_day_hour')
-    gp = df[['ip', 'day', 'hour', 'channel']].groupby(by=['ip', 'day', 
-             'hour'])[['channel']].count().reset_index().rename(index=str, 
+    gp = df[['ip', 'day', 'hour', 'channel']].groupby(by=['ip', 'day',
+             'hour'])[['channel']].count().reset_index().rename(index=str,
              columns={'channel': 'count_ip_day_hour'})
     df = df.merge(gp, on=['ip','day','hour'], how='left')
     del gp
@@ -75,7 +85,7 @@ def _preprocess_common(df):
 
     logging.info('group by : ip_hour_os')
     gp = df[['ip', 'day', 'os', 'hour', 'channel']].groupby(by=['ip', 'os', 'day',
-             'hour'])[['channel']].count().reset_index().rename(index=str, 
+             'hour'])[['channel']].count().reset_index().rename(index=str,
              columns={'channel': 'count_ip_hour_os'})
     df = df.merge(gp, on=['ip','os','hour','day'], how='left')
     del gp
@@ -86,7 +96,7 @@ def _preprocess_common(df):
 
     logging.info('group by : ip_hh_app')
     gp = df[['ip', 'app', 'hour', 'day', 'channel']].groupby(by=['ip', 'app', 'day',
-             'hour'])[['channel']].count().reset_index().rename(index=str, 
+             'hour'])[['channel']].count().reset_index().rename(index=str,
              columns={'channel': 'count_ip_hh_app'})
     df = df.merge(gp, on=['ip','app','hour','day'], how='left')
     del gp
@@ -97,7 +107,7 @@ def _preprocess_common(df):
 
     logging.info('group by : ip_hour_device')
     gp = df[['ip', 'device', 'hour', 'day', 'channel']].groupby(by=['ip', 'device', 'day',
-             'hour'])[['channel']].count().reset_index().rename(index=str, 
+             'hour'])[['channel']].count().reset_index().rename(index=str,
              columns={'channel': 'count_ip_hour_device'})
     df = df.merge(gp, on=['ip','device','day','hour'], how='left')
     del gp
@@ -108,9 +118,17 @@ def _preprocess_common(df):
 
     df.drop(['day'], axis=1, inplace=True)
     gc.collect()
-    #print( df.info() )    
+    #print( df.info() )
     #print(df.describe())
     return df
+
+
+def open_dispatching(filename, use_tensorflow=False, **kwargs):
+    if filename.startswith('gs://') or use_tensorflow:
+        from tensorflow.python.lib.io import file_io
+        return file_io.FileIO(filename, **kwargs)
+    else:
+        return open(filename, **kwargs)
 
 
 # Aggregation function
@@ -213,31 +231,39 @@ def correlation_matrix(df):
     plt.show()
 
 
-def load_train_raw(filename):
+def load_train_raw(filename, number_samples):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'is_attributed']
     logging.info('Loading labeled data from {!r}...'.format(filename))
-    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+    with open_dispatching(filename, mode='rb') as f:
+        return pd.read_csv(f, dtype=DTYPES, usecols=columns,
+                           nrows=number_samples)
 
 
-def load_test_raw(filename):
+def load_test_raw(filename, number_samples):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'click_id']
     logging.info('Loading unlabeled data from {!r}...'.format(filename))
-    return pd.read_csv(filename, dtype=DTYPES, usecols=columns)
+    with open_dispatching(filename, mode='rb') as f:
+        return pd.read_csv(f, dtype=DTYPES, usecols=columns,
+                           nrows=number_samples)
 
 
-def load_train(filename):
+def load_train(filename, number_samples=None):
     """
     Reads and preprocesses labeled data from `filename`. This method should be
     called for both training and validation data.
     """
-    return _preprocess_common(load_train_raw(filename))
+    if number_samples < 0:
+        number_samples = None
+    return _preprocess_common(load_train_raw(filename, number_samples))
 
 
-def load_test(filename):
+def load_test(filename, number_samples=None):
     """
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-    return _preprocess_common(load_test_raw(filename))
+    if number_samples < 0:
+        number_samples = None
+    return _preprocess_common(load_test_raw(filename, number_samples))

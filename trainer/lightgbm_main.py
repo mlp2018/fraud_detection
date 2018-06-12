@@ -52,34 +52,34 @@ LGBM_PARAMS = {
     'reg_lambda':         0, # L2 regularization term on weights
     'nthread':            8, # Number of threads
     'verbose':            0, # Verbosity
-    'n_estimators':       99999999, # Number of boosting iterations. Very high because of early stopping
+    'n_estimators':       2000, # Number of boosting iterations. Very high because of early stopping
 	 'scale_pos_weight':   1, # Weight of the positive class in binary classification
 }
 
 
-def lgb_cv(params, training_data, predictors, target, validation_data=None, 
+def lgb_cv(params, training_data, predictors, target, validation_data=None,
            categorical_features=None, n_splits=5, early_stopping_rounds=20):
     """
     Returns the average score after performing cross validation on
     `training_data` with `n_splits` splits. At each iteration, LightDBM
     algorithm with `params` is used for making predictions.
     """
-    
+
     # Load default parameters and update them using provided parameters
     lgb_params = deepcopy(LGBM_PARAMS)
     lgb_params.update(params)
-    
+
     # Instantiate classification model with the default parameter values
     gbm = lgb.LGBMRegressor(**lgb_params)
-    
+
     # Dictionary with additional parameters to pass to .fit method.
     fit_params = {
         'feature_name': predictors,
         'categorical_feature': categorical_features,
         # 'callbacks': [lgb.print_evaluation(period=10)]
     }
-    
-    # If we're given some validation data, we can use it for early stopping    
+
+    # If we're given some validation data, we can use it for early stopping
     if validation_data is not None:
         fit_params['eval_set'] = [(validation_data[predictors].values,
                                    validation_data[target].values)]
@@ -93,7 +93,7 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
                              training_data[target].values,
                              scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
                              fit_params=fit_params)
-    
+
     return scores.mean()
 
 
@@ -104,29 +104,29 @@ def lgb_train(params, training_data, predictors, target,
     # Load default parameters and update them using provided parameters
     lgb_params = deepcopy(LGBM_PARAMS)
     lgb_params.update(params)
-    
+
     # Instantiate classification model with the default parameter values
     gbm = lgb.LGBMRegressor(**lgb_params)
-    
+
     # Dictionary with additional parameters to pass to .fit method.
     fit_params = {
         'feature_name': predictors,
         'categorical_feature': categorical_features,
         # 'callbacks': [lgb.print_evaluation(period=10)]
     }
-    
-    # If we're given some validation data, we can use it for early stopping    
+
+    # If we're given some validation data, we can use it for early stopping
     if validation_data is not None:
         fit_params['eval_set'] = [(validation_data[predictors].values,
                                    validation_data[target].values)]
         fit_params['early_stopping_rounds'] = early_stopping_rounds
         fit_params['eval_metric'] = 'auc'
-    
+
     # Train the model
     logging.info('Training the model...')
     gbm = gbm.fit(training_data[predictors].values,
                   training_data[target].values, **fit_params)
-    
+
     return gbm
 
 
@@ -136,55 +136,75 @@ def main():
                         level=args.log)
 
     logging.info('Preprocessing...')
-    
+
     # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
+    train_df = pp.load_train(args.train_file, int(args.number_lines)
+        if args.number_lines is not None else None)
     train_df = pp.preprocess_confidence(train_df)
-      
+
     # Load the validation data, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
         valid_df = pp.preprocess_confidence(train_df, valid_df)
     else:
         valid_df = None
-        
+
     # Load the test data set, i.e. the data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test(args.test_file)
         test_df = pp.preprocess_confidence(train_df, test_df)
     else:
         test_df = None
-    
+
     # Column we're trying to predict
     target = 'is_attributed'
-    
-    # Check if optimal parameter values have been established
-    optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
-    
-    # Provide parameter values
+
+    # Provide default hyperparameter values
     lgb_params = deepcopy(LGBM_PARAMS)
-    if os.path.isfile(optim_file):
-        with open(optim_file, "r") as optim_file:
-            optim_values = json.load(optim_file)
+
+    # Path to file with optimized hyperparameter values
+    optim_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
+
+    # When running locally, check whether optimal hyperparameter values have 
+    # been established. If yes, use those. Otherwise, use default values.
+    if args.where == 'local':
+       
+        if os.path.isfile(optim_file):
+            with open(optim_file, "r") as optim_file:
+                optim_values = json.load(optim_file)
         
-        # Replace default values
-        logging.info('Replacing default parameter values with optimized \
-ones...')
+            # Replace default values
+            logging.info('Replacing default hyperparameter values with \
+                         optimized ones...')
+            lgb_params.update(optim_values)
+    
+        else:
+            logging.info('No optimized hyperparameter values were found, so \
+                         using the default ones...')
+
+    # When running in the cloud, replace default hyperparameter with optimal 
+    # hyperparameter values. 
+    # TODO: Implement check of whether the text file with optimized 
+    # hyperparameter values actually exists.
+    elif args.where == 'cloud':
+        with pp.open_dispatching(optim_file, mode='rb') as f:
+            optim_values = json.load(f)
+        
+        logging.info('Replacing default hyperparameter values with \
+                     optimized ones...')
         lgb_params.update(optim_values)
-        
-    else:
-        logging.info('No optimized parameter values found, so using the \
-default ones...')
-    
+
+    # Optimization run: run cross-validation
     if args.run == 'optimization':
-    
+
         # Run cross-validation
         logging.info('Cross-validation part...')
         score = lgb_cv(lgb_params, train_df, pp.predictors, target,
                        categorical_features=pp.categorical, n_splits=5,
                        validation_data=valid_df)
         logging.info('Average score across the folds: {}'.format(score))
-        
+
+    # Submission run: training and making predictions
     elif args.run == 'submission':
 
         # Train the final model on all data
@@ -196,7 +216,7 @@ default ones...')
         # Check if job-dir exists, and if not, create it
         if not path.exists(args.job_dir):
             os.makedirs(args.job_dir)
-            
+
         # Save model to file
         model_file = path.join(args.job_dir, 'model.txt')
         logging.info('Saving trained model to {!r}...'.format(model_file))
@@ -210,19 +230,27 @@ default ones...')
             logging.info('Saving predictions to {!r}...'.format(predictions_file))
             pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
                           predictions}).to_csv(predictions_file, index=False)
-    
+
     # Write parameter values to file
     output_file = path.join(args.job_dir, 'used_param_values.txt')
     logging.info('Saving used parameter values to {!r}...'.format(output_file))
-       
-    with open(output_file, "w") as param_file:
-        json.dump(lgb_params, param_file)
+    with pp.open_dispatching(output_file, mode='wb') as f:
+        json.dump(lgb_params, f)
+
+    # Make predictions and save to file
+    if test_df is not None:
+        logging.info('Making predictions...')
+        predictions = gbm.predict(test_df[pp.predictors])
+        predictions_file = path.join(args.job_dir, 'predictions.csv')
+        logging.info('Saving predictions to {!r}...'.format(predictions_file))
+        with pp.open_dispatching(predictions_file, mode='wb') as f:
+            pd.DataFrame({'click_id': test_df['click_id'], 'is_attributed':
+                          predictions}).to_csv(f, index=False)
 
     # Correlation matrix of data
-    corr = pp.correlation_matrix(train_df[pp.predictors])
-    print(corr)
+    #corr = pp.correlation_matrix(train_df[pp.predictors])
+    #print(corr)
 
-    
 # Run code
 if __name__ == '__main__':
     main()

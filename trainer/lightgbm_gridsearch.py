@@ -24,6 +24,7 @@ from os import path
 
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import StratifiedKFold
 
 import trainer.lightgbm_functions as lf
@@ -50,7 +51,7 @@ LGBM_PARAMS = {
     'reg_lambda':         0, # L2 regularization term on weights
     'nthread':            8, # Number of threads
     'verbose':            0, # Verbosity
-    'n_estimators':       99999999, # Number of boosting iterations. Very high because of early stopping
+    'n_estimators':       2000, # Number of boosting iterations. Very high because of early stopping
 	 'scale_pos_weight':   1.0, # Weight of the positive class in binary classification
 }
 
@@ -62,7 +63,7 @@ LGBM_PARAM_GRID = {
     'min_data_in_leaf': [10, 20, 100, 1000],
     'max_depth': [-1, 6, 12],
     'subsample': [0.3, 0.6, 1],
-    'colsample_by_tree': [0.3, 0.6, 1],
+    'colsample_bytree': [0.3, 0.6, 1],
     'min_child_weight': [0.001, 0.01, 0.1, 1, 5],
     'scale_pos_weight': [1, 10, 100, 1000],
 }
@@ -98,14 +99,18 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     
     # Instantiate the grid
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
-                        scoring='roc_auc', n_jobs=1, verbose=1, 
-                        fit_params=fit_params)
+# =============================================================================
+#     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
+#                         scoring='roc_auc', n_jobs=1, verbose=1, 
+#                         fit_params=fit_params)
+# =============================================================================
+    grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
+                              cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
+                              fit_params=fit_params, n_iter=3)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
     grid.fit(training_data[predictors].values, training_data[target].values)
-
 
     # Examine the results
     scores = grid.cv_results_['mean_test_score']
@@ -126,11 +131,11 @@ def main():
 
     logging.info('Preprocessing...')
     
-    # Load training data set, i.e. "the 90%"
+    # Load the training data, i.e. "the 90%"
     train_df = pp.load_train(args.train_file)
     train_df = pp.preprocess_confidence(train_df)
     
-    # Load validation data set, i.e. "the 10%"
+    # Load the validation data, i.e. "the 10%"
     if args.valid_file is not None:
         valid_df = pp.load_train(args.valid_file)
         valid_df = pp.preprocess_confidence(train_df, valid_df)
@@ -147,16 +152,19 @@ def main():
                                  categorical_features=pp.categorical, 
                                  n_splits=5, validation_data=valid_df)
     
-    # Write best parameters to file
-    output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
-    
+    # Check whether job-dir exists    
     if not os.path.exists(args.job_dir):
         os.makedirs(args.job_dir)
-    
-    with open(output_file, "w") as param_file:
-        json.dump(best_params, param_file)
-        
 
+    # Write best hyperparameter values to file
+    output_file = path.join(args.job_dir, 'optimal_lgbm_param_values.txt')
+    logging.info('Saving the optimal hyperparameter values to {!r}...'
+                 .format(output_file))
+    with pp.open_dispatching(output_file, mode='wb') as f:
+        json.dump(best_params, f)
+    
+    
 # Run code    
 if __name__ == '__main__':
     main()
+    
