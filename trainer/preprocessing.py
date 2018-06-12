@@ -258,11 +258,9 @@ def load_train(filename, number_samples=None):
     return preprocess_common(load_train_raw(filename, number_samples))
 
 
-def load_test(filename, number_samples=None):
+def load_test(filename):
     """
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-    if number_samples < 0:
-        number_samples = None
-    return preprocess_common(load_test_raw(filename, number_samples))
+    return preprocess_common(load_test_raw(filename))

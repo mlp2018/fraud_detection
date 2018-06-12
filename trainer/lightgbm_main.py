@@ -98,8 +98,8 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
     for train_index, test_index in skf.split(np.zeros(training_data.shape[0]), training_data[target]):
         fold = fold + 1
       #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
-        train = pp.preprocess_common(training_data.iloc[train_index])
-        test = pp.preprocess_common(training_data.iloc[test_index])
+        train = pp.preprocess_common(training_data.iloc[train_index, 0:training_data.shape[1]])
+        test = pp.preprocess_common(training_data.iloc[test_index, 0:training_data.shape[1]])
         train_df = pp.preprocess_confidence(train)
         test_df = pp.preprocess_confidence(train, test)
 
@@ -190,7 +190,7 @@ default ones...')
         # Run cross-validation
         logging.info('Cross-validation part...')
         score = lgb_cv(lgb_params, train_df, pp.predictors, target,
-                       categorical_features=pp.categorical, n_splits=5,
+                       categorical_features=pp.categorical, n_splits=3,
                        validation_data=valid_df)
         logging.info('Average score across the folds: {}'.format(score))
 
