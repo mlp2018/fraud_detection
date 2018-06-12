@@ -92,8 +92,11 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
       #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
         train = training_data.iloc[train_index]
         test = training_data.iloc[test_index]
-        train_df, test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
-                                                               pp.preprocess_common(validation_data))
+        train_df = pp.preprocess_confidence(pp.preprocess_common(train))
+        test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
+                                                     pp.preprocess_common(validation_data))
+        test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
+                                                     pp.preprocess_common(validation_data))
 
         # If we're given some validation data, we can use it for early stopping
         if validation_data is not None:
