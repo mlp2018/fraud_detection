@@ -112,7 +112,6 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
     logging.info('Running the grid search...')
     grid.fit(training_data[predictors].values, training_data[target].values)
 
-
     # Examine the results
     scores = grid.cv_results_['mean_test_score']
     best_score = grid.best_score_

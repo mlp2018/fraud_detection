@@ -44,15 +44,15 @@ def make_args_parser():
     parser.add_argument(
       '--number-lines', help='Number of lines to use.', required=False)
     parser.add_argument(
-        '--job-dir',
-        help='Directory where to store checkpoints and exported models',
-        default='.')
+      '--job-dir', help='Directory where to store checkpoints and exported \
+        models', default='.')
     parser.add_argument(
-      '--run', 
-      help='Choose <optimization> to run the cross-validation, or \
-      <submission> to train on all the training data',
-      choices = ['optimization', 'submission'],
-      required=True)
+      '--run', help='Choose <optimization> to run the cross-validation, or \
+      <submission> to train on all the training data', choices = 
+      ['optimization', 'submission'], required=True)
+    parser.add_argument(
+      '--where', help='Do you want to run in the cloud or locally?', choices = 
+      ['cloud', 'local'], required=True)
     parser.add_argument(
         '--log', help='Logging level', default=logging.DEBUG,
         action=StoreLoggingLevel)
