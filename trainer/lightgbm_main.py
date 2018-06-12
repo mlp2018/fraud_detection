@@ -61,7 +61,7 @@ LGBM_PARAMS = {
 
 
 def lgb_cv(params, training_data, predictors, target, validation_data=None,
-           categorical_features=None, n_splits=5, early_stopping_rounds=20):
+           categorical_features=None, n_splits=3, early_stopping_rounds=20):
     """
     Returns the average score after performing cross validation on
     `training_data` with `n_splits` splits. At each iteration, LightDBM
@@ -82,36 +82,34 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
         # 'callbacks': [lgb.print_evaluation(period=10)]
     }
 
+    # If we're given some validation data, we can use it for early stopping
+    if validation_data is not None:
+        fit_params['eval_set'] = [(validation_data[predictors].values,
+                                   validation_data[target].values)]
+        fit_params['early_stopping_rounds'] = early_stopping_rounds
+        fit_params['eval_metric'] = 'auc'
+
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
     scores = []
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    
-    for train_index, test_index in skf.split(np.zeros(training_data.shape[0]), training_data[target]):
-        fold = 1
-      #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
-        train = training_data.iloc[train_index]
-        test = training_data.iloc[test_index]
-        train_df = pp.preprocess_confidence(pp.preprocess_common(train))
-        test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
-                                                     pp.preprocess_common(validation_data))
-        test_df, valid_df = pp.preprocess_confidence(pp.preprocess_common(train), pp.preprocess_common(test),
-                                                     pp.preprocess_common(validation_data))
+    fold = 0
 
-        # If we're given some validation data, we can use it for early stopping
-        if validation_data is not None:
-            fit_params['eval_set'] = [(valid_df[predictors].values,
-                                       valid_df[target].values)]
-            fit_params['early_stopping_rounds'] = early_stopping_rounds
-            fit_params['eval_metric'] = 'auc'
+    for train_index, test_index in skf.split(np.zeros(training_data.shape[0]), training_data[target]):
+        fold = fold + 1
+      #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
+        train = pp.preprocess_common(training_data.iloc[train_index])
+        test = pp.preprocess_common(training_data.iloc[test_index])
+        train_df = pp.preprocess_confidence(train)
+        test_df = pp.preprocess_confidence(train, test)
 
         gbm = lgb_train(lgb_params, train_df, predictors, target,
-                        categorical_features=categorical_features, validation_data=valid_df)
+                        categorical_features=categorical_features, validation_data=validation_data)
 
         y_hat = gbm.predict(test_df[predictors].values)
 
-        score = roc_auc_score(test[target].values, y_hat)
-        myplot.plot_roc_curve(test[target].values, y_hat, score)
+        score = roc_auc_score(test_df[target].values, y_hat)
+        #myplot.plot_roc_curve(test[target].values, y_hat, score)
         print("fold=%d, auc: %.2f%%" % (fold, score))
         scores.append(score)
     return np.mean(scores)
@@ -158,11 +156,11 @@ def main():
     logging.info('Preprocessing...')
     
     # Load training data set, i.e. "the 90%"
-    train_df = pp.load_train_raw(args.train_file)
+    train_df = pp.load_train_raw(args.train_file, 2699999)
     
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
-        valid_df = pp.load_train_raw(args.valid_file)
+        valid_df = pp.preprocess_confidence(pp.load_train(args.valid_file, 300002))
     # Load the test data set, i.e. data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test_raw(args.test_file)
