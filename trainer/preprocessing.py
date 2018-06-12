@@ -239,13 +239,12 @@ def load_train_raw(filename, number_samples):
                            nrows=number_samples)
 
 
-def load_test_raw(filename, number_samples):
+def load_test_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'click_id']
     logging.info('Loading unlabeled data from {!r}...'.format(filename))
     with open_dispatching(filename, mode='rb') as f:
-        return pd.read_csv(f, dtype=DTYPES, usecols=columns,
-                           nrows=number_samples)
+        return pd.read_csv(f, dtype=DTYPES, usecols=columns)
 
 
 def load_train(filename, number_samples=None):
