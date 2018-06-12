@@ -186,7 +186,7 @@ def main():
     # hyperparameter values. 
     # TODO: Implement check of whether the text file with optimized 
     # hyperparameter values actually exists.
-    if args.where == 'cloud':
+    elif args.where == 'cloud':
         with pp.open_dispatching(optim_file, mode='rb') as f:
             optim_values = json.load(f)
         
