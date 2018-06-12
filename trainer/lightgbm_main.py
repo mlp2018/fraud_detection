@@ -160,7 +160,8 @@ def main():
     
     # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
-        valid_df = pp.preprocess_confidence(pp.load_train(args.valid_file, 300002))
+        valid_df = pp.load_train(args.valid_file, 300002)
+        valid_df = pp.preprocess_confidence(valid_df)
     # Load the test data set, i.e. data for which we need to make predictions
     if args.test_file is not None:
         test_df = pp.load_test_raw(args.test_file)
