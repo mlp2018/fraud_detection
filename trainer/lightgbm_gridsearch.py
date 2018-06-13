@@ -133,12 +133,16 @@ def main():
     
     # Load the training data, i.e. "the 90%"
     train_df = pp.load_train(args.train_file, int(args.number_lines))
-    train_df = pp.preprocess_confidence(train_df)
+    #train_df = pp.preprocess_confidence(train_df)
     
     # Use the last 10% of the training data as validation data
     ten_percent = int(int(args.number_lines) * 0.10)
-    valid_df = train_df[-ten_percent:]
     train_df = train_df[:-ten_percent]    
+    valid_df = train_df[-ten_percent:]
+    
+    # Preprocess
+    train_df = pp.preprocess_confidence(train_df)
+    valid_df = pp.preprocess_confidence(valid_df)
     
 # =============================================================================
 #     # Load the validation data, i.e. "the 10%"
