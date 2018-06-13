@@ -102,7 +102,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
                           [0]*split_where)
     grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
                               cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
-                              fit_params=fit_params, n_iter=1000)
+                              fit_params=fit_params, n_iter=3)
 
     # Use the below code if you want to do a full grid search
 # =============================================================================
@@ -148,19 +148,19 @@ def main():
     valid_df = pp.preprocess_confidence(train_df, pp._preprocess_common(
             valid_df))
     
-    # Process test separately
-    test_df = pp.preprocess_confidence(train_df[:-ten_percent],
-                                       pp._preprocess_common(
-                                               train_df[-ten_percent:]))
-    
     # Process train separately
-    train_df = pp.preprocess_confidence(pp._preprocess_common(
+    train_split = pp.preprocess_confidence(pp._preprocess_common(
             train_df[:-ten_percent]))
     
+    # Process test separately
+    test_split = pp.preprocess_confidence(train_split, pp._preprocess_common(
+            train_df[-ten_percent:]))
+    
     # Merge train and test data again
-    training_data = train_df.append(test_df)
+    training_data = train_split.append(test_split)
     del train_df
-    del test_df
+    del train_split
+    del test_split
     
     # Column we're trying to predict
     target = 'is_attributed'
