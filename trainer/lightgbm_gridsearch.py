@@ -98,15 +98,19 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
         fit_params['eval_metric'] = 'auc'
     
     # Instantiate the grid
-    skf = PredefinedSplit(test_fold=[-1]*(len(training_data) - split_where) + [0]*split_where)
+    skf = PredefinedSplit(test_fold=[-1]*(len(training_data) - split_where) + 
+                          [0]*split_where)
+    grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
+                              cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
+                              fit_params=fit_params, n_iter=1000)
+
+    # Use the below code if you want to do a full grid search
 # =============================================================================
 #     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
 #                         scoring='roc_auc', n_jobs=1, verbose=1, 
 #                         fit_params=fit_params)
 # =============================================================================
-    grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
-                              cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
-                              fit_params=fit_params, n_iter=1000)
+
     
     # Fit the grid with data
     logging.info('Running the grid search...')
@@ -139,33 +143,35 @@ def main():
     ten_percent = int(int(args.number_lines) * 0.10)
     valid_df = train_df[-ten_percent:]
     train_df = train_df[:-ten_percent]
-    # process train separately
-    train_df[:-ten_percent] = pp.preprocess_confidence(pp._preprocess_common(train_df[:-ten_percent]))
-    # process test separately
-    train_df[-ten_percent:] = pp.preprocess_confidence(train_df[:-ten_percent],
-                                                       pp._preprocess_common(train_df[-ten_percent:]))
-    # process validation separately
-    valid_df = pp.preprocess_confidence(train_df[:-ten_percent], pp._preprocess_common(valid_df))
 
-# =============================================================================
-#     # Load the validation data, i.e. "the 10%"
-#     if args.valid_file is not None:
-#         valid_df = pp.load_train(args.valid_file)
-#         valid_df = pp.preprocess_confidence(train_df, valid_df)
-#     else:
-#         valid_df = None
-#     
-# =============================================================================
+    # Process validation separately
+    valid_df = pp.preprocess_confidence(train_df, pp._preprocess_common(
+            valid_df))
+    
+    # Process test separately
+    test_df = pp.preprocess_confidence(train_df[:-ten_percent],
+                                       pp._preprocess_common(
+                                               train_df[-ten_percent:]))
+    
+    # Process train separately
+    train_df = pp.preprocess_confidence(pp._preprocess_common(
+            train_df[:-ten_percent]))
+    
+    # Merge train and test data again
+    training_data = train_df.append(test_df)
+    del train_df
+    del test_df
     
     # Column we're trying to predict
     target = 'is_attributed'
     
     # Run grid search
     logging.info('Running the grid search...')
-    best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, train_df, 
+    best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, training_data, 
                                  pp.predictors, target, 
                                  categorical_features=pp.categorical, 
-                                 split_where=ten_percent, validation_data=valid_df)
+                                 split_where=ten_percent, validation_data=
+                                 valid_df)
     
     # Check whether job-dir exists    
     if not os.path.exists(args.job_dir):
