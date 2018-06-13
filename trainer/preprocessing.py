@@ -35,14 +35,14 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+predictors = ['app', 'device', 'channel', 'hour_sq',
               'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
               'count_ip_hour_device', 'ip_confRate', 'app_confRate',
               'device_confRate', 'os_confRate', 'channel_confRate',
               'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
               'channel_os_confRate', 'channel_device_confRate', 
               'os_device_confRate']
-categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+categorical = ['app', 'device', 'channel', 'hour_sq',
                'count_ip_day_hour', 'count_ip_hour_os', 
                'count_ip_hh_app', 'count_ip_hour_device']
 

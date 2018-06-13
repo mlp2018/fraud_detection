@@ -98,7 +98,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
         fit_params['eval_metric'] = 'auc'
     
     # Instantiate the grid
-    skf = PredefinedSplit(test_fold=[[-1]*(len(training_data)- split_where + [0]*split_where)])
+    skf = PredefinedSplit(test_fold=[-1]*(len(training_data) - split_where) + [0]*split_where)
 # =============================================================================
 #     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
 #                         scoring='roc_auc', n_jobs=1, verbose=1, 
