@@ -25,7 +25,7 @@ from os import path
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import PredefinedSplit
 
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
@@ -70,8 +70,8 @@ LGBM_PARAM_GRID = {
 
 
 def lgb_gridsearch(default_params, param_grid, training_data, predictors, 
-                   target, validation_data=None, categorical_features=None, 
-                   n_splits=1, early_stopping_rounds=20):
+                   target, validation_data=None, categorical_features=None,
+                   split_where=None, early_stopping_rounds=20):
     """
     Performs a grid search to find the optimal value for all parameters.
     The grid search makes use of k-fold cross-validation.
@@ -98,7 +98,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
         fit_params['eval_metric'] = 'auc'
     
     # Instantiate the grid
-    skf = StratifiedKFold(n_splits=n_splits, random_state=1)
+    skf = PredefinedSplit(test_fold=[[-1]*(len(training_data)- split_where + [0]*split_where)])
 # =============================================================================
 #     grid = GridSearchCV(estimator=gbm, param_grid=param_grid, cv=skf,
 #                         scoring='roc_auc', n_jobs=1, verbose=1, 
@@ -132,18 +132,21 @@ def main():
     logging.info('Preprocessing...')
     
     # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file, int(args.number_lines))
+    train_df = pp.load_train_raw(args.train_file, int(args.number_lines))
     #train_df = pp.preprocess_confidence(train_df)
     
     # Use the last 10% of the training data as validation data
     ten_percent = int(int(args.number_lines) * 0.10)
-    train_df = train_df[:-ten_percent]    
     valid_df = train_df[-ten_percent:]
-    
-    # Preprocess
-    train_df = pp.preprocess_confidence(train_df)
-    valid_df = pp.preprocess_confidence(valid_df)
-    
+    train_df = train_df[:-ten_percent]
+    # process train separately
+    train_df[:-ten_percent] = pp.preprocess_confidence(pp._preprocess_common(train_df[:-ten_percent]))
+    # process test separately
+    train_df[-ten_percent:] = pp.preprocess_confidence(train_df[:-ten_percent],
+                                                       pp._preprocess_common(train_df[-ten_percent:]))
+    # process validation separately
+    valid_df = pp.preprocess_confidence(train_df[:-ten_percent], pp._preprocess_common(valid_df))
+
 # =============================================================================
 #     # Load the validation data, i.e. "the 10%"
 #     if args.valid_file is not None:
@@ -162,7 +165,7 @@ def main():
     best_params = lgb_gridsearch(LGBM_PARAMS, LGBM_PARAM_GRID, train_df, 
                                  pp.predictors, target, 
                                  categorical_features=pp.categorical, 
-                                 n_splits=5, validation_data=valid_df)
+                                 split_where=ten_percent, validation_data=valid_df)
     
     # Check whether job-dir exists    
     if not os.path.exists(args.job_dir):
