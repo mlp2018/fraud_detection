@@ -71,7 +71,7 @@ LGBM_PARAM_GRID = {
 
 def lgb_gridsearch(default_params, param_grid, training_data, predictors, 
                    target, validation_data=None, categorical_features=None, 
-                   n_splits=5, early_stopping_rounds=20):
+                   n_splits=1, early_stopping_rounds=20):
     """
     Performs a grid search to find the optimal value for all parameters.
     The grid search makes use of k-fold cross-validation.
@@ -106,7 +106,7 @@ def lgb_gridsearch(default_params, param_grid, training_data, predictors,
 # =============================================================================
     grid = RandomizedSearchCV(estimator=gbm, param_distributions=param_grid, 
                               cv=skf, scoring='roc_auc', n_jobs=1, verbose=1, 
-                              fit_params=fit_params, n_iter=3)
+                              fit_params=fit_params, n_iter=1000)
     
     # Fit the grid with data
     logging.info('Running the grid search...')
@@ -132,15 +132,23 @@ def main():
     logging.info('Preprocessing...')
     
     # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file)
+    train_df = pp.load_train(args.train_file, int(args.number_lines))
     train_df = pp.preprocess_confidence(train_df)
     
-    # Load the validation data, i.e. "the 10%"
-    if args.valid_file is not None:
-        valid_df = pp.load_train(args.valid_file)
-        valid_df = pp.preprocess_confidence(train_df, valid_df)
-    else:
-        valid_df = None
+    # Use the last 10% of the training data as validation data
+    ten_percent = int(int(args.number_lines) * 0.10)
+    valid_df = train_df[-ten_percent:]
+    train_df = train_df[:-ten_percent]    
+    
+# =============================================================================
+#     # Load the validation data, i.e. "the 10%"
+#     if args.valid_file is not None:
+#         valid_df = pp.load_train(args.valid_file)
+#         valid_df = pp.preprocess_confidence(train_df, valid_df)
+#     else:
+#         valid_df = None
+#     
+# =============================================================================
     
     # Column we're trying to predict
     target = 'is_attributed'
