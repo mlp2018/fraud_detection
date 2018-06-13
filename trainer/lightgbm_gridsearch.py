@@ -145,8 +145,8 @@ def main():
     train_df = train_df[:-ten_percent]
 
     # Process validation separately
-    valid_df = pp.preprocess_confidence(train_df[:-ten_percent], pp._preprocess_common(
-            valid_df))
+    valid_df = pp.preprocess_confidence(train_df[:-ten_percent], 
+                                        pp._preprocess_common(valid_df))
     
     # Process train separately
     train_split = pp.preprocess_confidence(pp._preprocess_common(
