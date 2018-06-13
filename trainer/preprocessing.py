@@ -35,15 +35,14 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-              'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
-              'count_ip_hour_device', 'ip_confRate', 'app_confRate',
-              'device_confRate', 'os_confRate', 'channel_confRate',
+predictors = ['ip', 'app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+              'count_ip_day_hour', 'count_ip_hour_os',
+              'count_ip_hh_app', 'count_ip_hour_device', 'ip_confRate',
+              'app_confRate','device_confRate', 'os_confRate', 'channel_confRate',
               'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
-              'channel_os_confRate', 'channel_device_confRate', 
-              'os_device_confRate']
-categorical = ['app', 'device', 'os', 'channel', 'hour', 'hour_sq',
-               'count_ip_day_hour', 'count_ip_hour_os', 
+              'channel_os_confRate', 'channel_device_confRate', 'os_device_confRate']
+categorical = ['ip', 'app', 'device', 'os', 'channel', 'hour', 'hour_sq',
+               'count_ip_day_hour', 'count_ip_hour_os',
                'count_ip_hh_app', 'count_ip_hour_device']
 
 
@@ -55,7 +54,7 @@ def reformat_click_time(df):
     df.drop(['click_time'], axis=1, inplace=True)
 
 
-def _preprocess_common(df):
+def preprocess_common(df):
     """
     Data transformations that should be done to both training and test data.
     """
@@ -143,7 +142,7 @@ def rate_calculation(x):
     return rate * conf
 
 
-def preprocess_confidence(train_df, test_df=None):
+def preprocess_confidence(train_df, test_df=None, valid_df=None):
     """
     Feature creation that should be done given training data and then merged \
     with test data.
@@ -240,13 +239,12 @@ def load_train_raw(filename, number_samples):
                            nrows=number_samples)
 
 
-def load_test_raw(filename, number_samples):
+def load_test_raw(filename):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'click_id']
     logging.info('Loading unlabeled data from {!r}...'.format(filename))
     with open_dispatching(filename, mode='rb') as f:
-        return pd.read_csv(f, dtype=DTYPES, usecols=columns,
-                           nrows=number_samples)
+        return pd.read_csv(f, dtype=DTYPES, usecols=columns)
 
 
 def load_train(filename, number_samples=None):
@@ -256,14 +254,12 @@ def load_train(filename, number_samples=None):
     """
     if number_samples < 0:
         number_samples = None
-    return _preprocess_common(load_train_raw(filename, number_samples))
+    return preprocess_common(load_train_raw(filename, number_samples))
 
 
-def load_test(filename, number_samples=None):
+def load_test(filename):
     """
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-    if number_samples < 0:
-        number_samples = None
-    return _preprocess_common(load_test_raw(filename, number_samples))
+    return preprocess_common(load_test_raw(filename))

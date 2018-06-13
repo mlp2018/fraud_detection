@@ -25,11 +25,14 @@ from os import path
 
 import lightgbm as lgb
 import pandas as pd
+import numpy as np
 
 from trainer.cross_validation import cross_val_score
 from sklearn.model_selection import StratifiedKFold
 import trainer.lightgbm_functions as lf
 import trainer.preprocessing as pp
+import trainer.plotting_functions as myplot
+from sklearn.metrics import roc_auc_score
 
 
 # Default parameters
@@ -58,7 +61,7 @@ LGBM_PARAMS = {
 
 
 def lgb_cv(params, training_data, predictors, target, validation_data=None,
-           categorical_features=None, n_splits=5, early_stopping_rounds=20):
+           categorical_features=None, n_splits=3, early_stopping_rounds=20):
     """
     Returns the average score after performing cross validation on
     `training_data` with `n_splits` splits. At each iteration, LightDBM
@@ -88,13 +91,28 @@ def lgb_cv(params, training_data, predictors, target, validation_data=None,
 
     # Run k-fold cross-validation
     logging.info('Running cross validation...')
+    scores = []
     skf = StratifiedKFold(n_splits=n_splits, random_state=1)
-    scores = cross_val_score(gbm, training_data[predictors].values,
-                             training_data[target].values,
-                             scoring='roc_auc', cv=skf, n_jobs=1, verbose=1,
-                             fit_params=fit_params)
+    fold = 0
 
-    return scores.mean()
+    for train_index, test_index in skf.split(np.zeros(training_data.shape[0]), training_data[target]):
+        fold = fold + 1
+      #  print("TRAIN INDEX:", train_index, "TEST INDEX:", test_index)
+        train = pp.preprocess_common(training_data.iloc[train_index, 0:training_data.shape[1]])
+        test = pp.preprocess_common(training_data.iloc[test_index, 0:training_data.shape[1]])
+        train_df = pp.preprocess_confidence(train)
+        test_df = pp.preprocess_confidence(train, test)
+
+        gbm = lgb_train(lgb_params, train_df, predictors, target,
+                        categorical_features=categorical_features, validation_data=validation_data)
+
+        y_hat = gbm.predict(test_df[predictors].values)
+
+        score = roc_auc_score(test_df[target].values, y_hat)
+        #myplot.plot_roc_curve(test[target].values, y_hat, score)
+        print("fold=%d, auc: %.2f%%" % (fold, score))
+        scores.append(score)
+    return np.mean(scores)
 
 
 def lgb_train(params, training_data, predictors, target,
@@ -136,27 +154,18 @@ def main():
                         level=args.log)
 
     logging.info('Preprocessing...')
-
-    # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file, int(args.number_lines)
-        if args.number_lines is not None else None)
-    train_df = pp.preprocess_confidence(train_df)
-
-    # Load the validation data, i.e. "the 10%"
+    
+    # Load training data set, i.e. "the 90%"
+    train_df = pp.load_train_raw(args.train_file, 2699999)
+    
+    # Load validation data set, i.e. "the 10%"
     if args.valid_file is not None:
-        valid_df = pp.load_train(args.valid_file)
-        valid_df = pp.preprocess_confidence(train_df, valid_df)
-    else:
-        valid_df = None
-
-    # Load the test data set, i.e. the data for which we need to make predictions
+        valid_df = pp.load_train(args.valid_file, 300002)
+        valid_df = pp.preprocess_confidence(valid_df)
+    # Load the test data set, i.e. data for which we need to make predictions
     if args.test_file is not None:
-        test_df = pp.load_test(args.test_file)
-        test_df = pp.preprocess_confidence(train_df, test_df)
-    else:
-        test_df = None
+        test_df = pp.load_test_raw(args.test_file)
 
-    # Column we're trying to predict
     target = 'is_attributed'
 
     # Provide default hyperparameter values
@@ -200,7 +209,7 @@ def main():
         # Run cross-validation
         logging.info('Cross-validation part...')
         score = lgb_cv(lgb_params, train_df, pp.predictors, target,
-                       categorical_features=pp.categorical, n_splits=5,
+                       categorical_features=pp.categorical, n_splits=3,
                        validation_data=valid_df)
         logging.info('Average score across the folds: {}'.format(score))
 
