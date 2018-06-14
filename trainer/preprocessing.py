@@ -19,6 +19,8 @@ import logging
 import pandas as pd
 import numpy as np
 
+from tensorflow.python.lib.io import file_io
+
 
 DTYPES = {
     'ip'            : 'uint32',
@@ -48,12 +50,15 @@ def _preprocess_common(df):
     Data transformations that should be done to both training and test data.
     """
     logging.info('Modifying variables')
-        
+    
+    df_write = pd.DataFrame()
+    
     #We have most and least freq hours observed in test data as below
     most_freq_hours_in_test_data = [4, 5, 9, 10, 13, 14]
     least_freq_hours_in_test_data = [6, 11, 15]
     
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('uint8')
+    df_write['hour'] = df['hour']
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype('uint8')
     df.drop(['click_time'], axis=1, inplace=True)
     gc.collect()
@@ -134,11 +139,23 @@ def _preprocess_common(df):
     #print(df.describe())
     return( df )
 
+# Aggregation function
+def rate_calculation(x):
+    """This function is called from within the preprocess_confidence function \
+    and calculates the attributed rate and scales it by confidence."""
+    log_group = np.log(100000)
+    rate = x.sum() / float(x.count())
+    conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
+    # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+    # rate = np.nan # however this does not yield same performance as the weighting.
+    return rate * conf
 
-def preprocess_confidence(train_df, valid_df, test_df):
+def preprocess_confidence(train_df, test_df=None):
     """
-    Feature creation that should be done given training data and then merged wiht test data.
+    Feature creation that should be done given training data and then merged \
+    with test data.
     """
+    print('in preprocessing')
     ATTRIBUTION_CATEGORIES = [
         # V1 Features #
         ###############
@@ -158,37 +175,35 @@ def preprocess_confidence(train_df, valid_df, test_df):
     ]
 
     # Find frequency of is_attributed for each unique value in column
-    freqs = {}
+    logging.info("Calculating new features: Confidence rates...")
+    print('Calculating new features: Confidence rates...')
     for cols in ATTRIBUTION_CATEGORIES:
+        print(cols)
         # New feature name
         new_feature = '_'.join(cols) + '_confRate'
-
+        logging.info(new_feature)
+        
         # Perform the groupby
         group_object = train_df.groupby(cols)
-
+        
         # Group sizes
         group_sizes = group_object.size()
-        log_group = np.log(100000)  # 1000 views -> 60% confidence, 100 views -> 40% confidence
-        logging.info(
-        "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. Group Max /Mean / Median / Min: {} / {} / {} / {}".format(
-            cols, new_feature,
-            group_sizes.max(),
-            np.round(group_sizes.mean(), 2),
-            np.round(group_sizes.median(), 2),
-            group_sizes.min()
-        ))
+        
+        # Print group size descriptives once
+        if test_df is None:
+            logging.info(
+            "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
+            Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
+                cols, new_feature,
+                group_sizes.max(),
+                np.round(group_sizes.mean(), 2),
+                np.round(group_sizes.median(), 2),
+                group_sizes.min()
+            ))
 
-        # Aggregation function
-        def rate_calculation(x):
-            """Calculate the attributed rate. Scale by confidence"""
-            rate = x.sum() / float(x.count())
-            conf = np.min([1, np.log(x.count()) / log_group])
-            #if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
-            #    rate = np.nan # however this does not yield same performance as the weighting.
-            return rate * conf
-
-        # Perform the merge of new features with validation data set
-        train_df = train_df.merge(
+        # Merge function
+        def merge_new_features(group_object, df):
+            df = df.merge(
             group_object['is_attributed']. \
                 apply(rate_calculation). \
                 reset_index(). \
@@ -197,38 +212,32 @@ def preprocess_confidence(train_df, valid_df, test_df):
                 columns={'is_attributed': new_feature}
             )[cols + [new_feature]],
             on=cols, how='left'
-        )
-        # Perform the merge of new features with validation data set
-        valid_df = valid_df.merge(
-            group_object['is_attributed']. \
-                apply(rate_calculation). \
-                reset_index(). \
-                rename(
-                index=str,
-                columns={'is_attributed': new_feature}
-            )[cols + [new_feature]],
-            on=cols, how='left'
-        )
+            )
+                
+            # Replace NaNs by average of column
+            df = df.fillna(df.mean())
+            
+            return df
+            
+        # Perform the merge
+        if test_df is None:
+            train_df = merge_new_features(group_object, train_df)
+        elif test_df is not None:
+            test_df = merge_new_features(group_object, test_df)
+            
+    # Return the relevant data frame
+    if test_df is None:
+        return train_df
+    elif test_df is not None:
+        return test_df
 
-        # Perform the merge of new features with test data set
-        test_df = test_df.merge(
-            group_object['is_attributed']. \
-                apply(rate_calculation). \
-                reset_index(). \
-                rename(
-                index=str,
-                columns={'is_attributed': new_feature}
-            )[cols + [new_feature]],
-            on=cols, how='left'
-        )
-
-    return train_df, valid_df, test_df
 
 def load_train_raw(filename):
     logging.info('Loading labeled data from {!r}...'.format(filename))
     with file_io.FileIO(filename, mode='rb') as fin:
         df = pd.read_csv(fin, sep=",")
-    return df 
+        
+    return df
 
 
 def load_test_raw(filename):
@@ -251,4 +260,4 @@ def load_test(filename):
     Reads and preprocesses unlabeled data from `filename`. This method should be
     called for test data preprocessing.
     """
-return _preprocess_common(load_test_raw(filename))
+    return _preprocess_common(load_test_raw(filename))

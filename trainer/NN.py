@@ -19,30 +19,20 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from IPython.display import clear_output'''
 
-from trainer.cross_validation import stratified_kfold, cross_val_score
+#from cross_validation import stratified_kfold, cross_val_score
 import trainer.preprocessing as pp
 from tensorflow.python.lib.io import file_io
-
-'''class StoreLoggingLevel(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        if nargs is not None:
-            raise ValueError('`nargs` is not supported.')
-        super().__init__(option_strings, dest, **kwargs)
-
-    def __call__(self, parser, namespace, value, option_string=None):
-        level = getattr(logging, value.upper(), None)
-        if not isinstance(level, int):
-            raise ValueError('Invalid log level: {}'.format(value))
-        setattr(namespace, self.dest, level)'''
 
 def make_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-      '--train-file', help='Path to training data', required=True)
+      '--train-file', help='Path to training data', required=False)
     parser.add_argument(
       '--valid-file', help='Path to validation data', required=False)
     parser.add_argument(
       '--test-file', help='Path to test data', required=False)
+    parser.add_argument(
+      '--sub-file', help='Path to write the submission in a file', required=False)
     parser.add_argument(
         '--job-dir',
         help='Directory where to store checkpoints and exported models.',
@@ -53,6 +43,9 @@ def make_args_parser():
     return parser
 
 '''class PlotLosses(Callback):
+    """
+    Plot the loss and the accuracy of the training set and the validation set
+    """
     
     def on_train_begin(self, logs={}):
         self.i = 0
@@ -78,9 +71,15 @@ def make_args_parser():
         plt.show();'''
         
 def get_values(df):
+    """
+    Return a list of the column's name
+    """
     return df.columns.values.tolist() 
 
 def get_keras_data(dataset):
+    """
+    Split the data according to the column into an numpy array 
+    """
     
     variables = get_values(dataset)
        
@@ -88,80 +87,89 @@ def get_keras_data(dataset):
  
     return X
 
-def NN(train_df, val_df, test_df):
+def NN(train_df, val_df, test_df, sub_path):
+    """
+    Main function of the Neural Network 
+    """
     logging.info('Neural Network preprocessing')
     
-    if val_df is None:
+    '''if val_df is None:
         val_df = train_df[len(train_df)-10000:len(train_df)]
-        train_df = train_df[0:len(train_df)-10000]
-        
-    y_train = train_df['is_attributed'].values
-    train_df = train_df.drop('is_attributed', axis = 1)
-    train_df = train_df.drop('attributed_time', axis = 1) 
-    train_df = train_df.drop('click_time', axis = 1) #only if no preprocessing
+        train_df = train_df[0:len(train_df)-10000]'''
     
-    if val_df is not None:
-        y_val = val_df['is_attributed'].values 
-        val_df = val_df.drop(['is_attributed'], axis = 1)
-        val_df = get_keras_data(val_df)
+    if train_df is not None: 
+        y_train = train_df['is_attributed'].values
+        train_df = train_df.drop('is_attributed', axis = 1)
+        train_df = train_df.drop('attributed_time', axis = 1) 
+        #train_df = train_df.drop('click_time', axis = 1) #only if no preprocessing
+        gc.collect()
+        if val_df is not None:
+            y_val = val_df['is_attributed'].values 
+            val_df = val_df.drop(['is_attributed'], axis = 1)
+            val_df = get_keras_data(val_df)
+            
+        list_variables = get_values(train_df)
+        print(list_variables)
+    
+        logging.info('Model is creating...')    
         
-    list_variables = get_values(train_df)
-
-    print(list_variables)
+        max_var = []
+        if test_df is not None:
+            for i, var in enumerate(list_variables):
+                max_var.append(np.max([train_df[var].max(), test_df[var].max()])+1)    
+            train_df = get_keras_data(train_df)
+        else:
+            for i, var in enumerate(list_variables):
+                max_var.append(train_df[var].max()+1)    
+            train_df = get_keras_data(train_df)
         
-    max_var = []
-    if test_df is not None:
+        emb_n = 50
+        dense_n = 1000
+        
+        in_var = []
+        emb_var = []    
         for i, var in enumerate(list_variables):
-            max_var.append(np.max([train_df[var].max(), test_df[var].max()])+1)    
-        train_df = get_keras_data(train_df)
-    else:
-        for i, var in enumerate(list_variables):
-            max_var.append(train_df[var].max()+1)    
-        train_df = get_keras_data(train_df)
+            in_var.append(Input(shape=[1], name = var))
+            emb_var.append(Embedding(max_var[i], emb_n)(in_var[i]))
+        
+        fe = concatenate([emb for emb in emb_var])
+        s_dout = SpatialDropout1D(0.2)(fe)
+        fl1 = Flatten()(s_dout)
+        #conv = Conv1D(100, kernel_size=4, strides=1, padding='same')(s_dout)
+        dl = Dense(100)(s_dout)
+        fl2 = Flatten()(dl)
+        concat = concatenate([(fl1), (fl2)])
+        x = Dropout(0.2)(Dense(dense_n,activation='relu')(concat))
+        x = Dropout(0.2)(Dense(dense_n,activation='relu')(x))
+        outp = Dense(1,activation='sigmoid')(x)
+        
+        model = Model(inputs=[var for var in in_var], outputs=outp)
+        
+        logging.info('Model is compiling...')
+        #parameters 
+        batch_size = 50000
+        epochs = 2 #12 for sample_train
+        exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
+        steps = int(len(list(train_df)[0]) / batch_size) * epochs
+        lr_init, lr_fin = 0.002, 0.0002
+        lr_decay = exp_decay(lr_init, lr_fin, steps)
+        optimizer_adam = Adam(lr=lr_init, decay=lr_decay)
+        
+        model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
+        model.summary()
+        
+        logging.info('Model is training...')
+        
+        model.fit(train_df, y_train, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=0.1)
+        del train_df, y_train; gc.collect()
+        '''model.save_weights('model_NN.h5')
+        with file_io.FileIO('model_NN.h5', mode='r') as input_f:
+            with file_io.FileIO('gs://bag_of_students/NN/model_NN.h5', mode='w+') as output_f:
+                output_f.write(input_f.read())
+                print("Saved model_NN.h5 to GCS")'''
     
-    logging.info('Model is creating...')
-    emb_n = 50
-    dense_n = 1000
-    
-    in_var = []
-    emb_var = []    
-    for i, var in enumerate(list_variables):
-        in_var.append(Input(shape=[1], name = var))
-        emb_var.append(Embedding(max_var[i], emb_n)(in_var[i]))
-    
-    fe = concatenate([emb for emb in emb_var])
-    s_dout = SpatialDropout1D(0.2)(fe)
-    fl1 = Flatten()(s_dout)
-    #conv = Conv1D(100, kernel_size=4, strides=1, padding='same')(s_dout)
-    #fl2 = Flatten()(conv)
-    #concat = concatenate([(fl1), (fl2)])
-    x = Dropout(0.2)(Dense(dense_n,activation='relu')(fl1))
-    x = Dropout(0.2)(Dense(dense_n,activation='relu')(x))
-    outp = Dense(1,activation='sigmoid')(x)
-    
-    model = Model(inputs=[var for var in in_var], outputs=outp)
-    
-    logging.info('Model is compiling...')
-    #parameters 
-    batch_size = 50000
-    epochs = 2 #12 for sample_train
-    exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
-    steps = int(len(list(train_df)[0]) / batch_size) * epochs
-    lr_init, lr_fin = 0.002, 0.0002
-    lr_decay = exp_decay(lr_init, lr_fin, steps)
-    optimizer_adam = Adam(lr=0.002, decay=lr_decay)
-    
-    model.compile(loss='binary_crossentropy',optimizer=optimizer_adam,metrics=['accuracy'])
-    model.summary()
-    
-    #callbacks = [ModelCheckpoint('best_model_NN.h5', save_best_only=True)] #, PlotLosses(),ReduceLROnPlateau(patience=1, min_lr=lr_fin), EarlyStopping(patience=1)]
-    
-    logging.info('Model is training...')
-    #class_weight = {0:.01,1:.99,'nan':0} # magic
-    #, validation_split=0.1
-    model.fit(train_df, y_train, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2)
-    del train_df, y_train; gc.collect()
-    model.save_weights('model_NN.h5')
+        #from keras.models import load_weights
+        #model.load_weights('C:/Users/Pauline/Documents/GitHub/fraud_detection/trainer/NN_model_NN.h5')
     
     if val_df is not None:
         logging.info('Prediction on validation set')
@@ -185,8 +193,7 @@ def NN(train_df, val_df, test_df):
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
         del test_df; gc.collect()
         logging.info("Writing....")
-        #sub.to_csv('sub_NN_kernel.csv',index=False)
-        with file_io.FileIO('gs://bag_of_students/NN/sub.csv', mode='wb') as fout:
+        with file_io.FileIO(sub_path, mode='wb') as fout: #gs://bag_of_students/NN/
             sub.to_csv(fout,index=False)
         logging.info("Done...")
         logging.info(sub.info())
@@ -198,17 +205,20 @@ def main():
         
     logging.info('Preprocessing...')
     # Load training data set, i.e. "the 90%"
-    train_df = pp.load_train_raw(args.train_file)
+    train_df = pp.load_train(args.train_file) if args.train_file is not None \
+        else None
     
     # Load validation data set, i.e. "the 10%"
     val_df = pp.load_train(args.valid_file) if args.valid_file is not None \
         else None
     
     # Load the test data set, i.e. data for which we need to make predictions.
-    test_df = pp.load_test_raw(args.test_file) if args.test_file is not None \
+    test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
+        
+    path_sub_file = args.sub_file
     
-    NN(train_df, val_df, test_df)
+    NN(train_df, val_df, test_df, path_sub_file)
     
 if __name__ == '__main__':
     main()
