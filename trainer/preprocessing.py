@@ -18,6 +18,7 @@ import gc
 import logging
 import pandas as pd
 import numpy as np
+
 #import seaborn as sns
 #import matplotlib.pyplot as plt
 
@@ -53,7 +54,6 @@ def reformat_click_time(df):
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype(
         DTYPES['day'])
     df.drop(['click_time'], axis=1, inplace=True)
-
 
 def _preprocess_common(df):
     """
@@ -122,6 +122,97 @@ def _preprocess_common(df):
     #print(df.describe())
     return df
 
+# Aggregation function
+def rate_calculation(x):
+    """This function is called from within the preprocess_confidence function \
+    and calculates the attributed rate and scales it by confidence."""
+    log_group = np.log(100000)
+    rate = x.sum() / float(x.count())
+    conf = np.min([1, np.log(x.count()) / log_group]) # 1000 views -> 60% confidence, 100 views -> 40% confidence
+    # if conf <= 0.4: # alternative instead of multiplying with confidence, simply use confidence as threshold
+    # rate = np.nan # however this does not yield same performance as the weighting.
+    return rate * conf
+
+def preprocess_confidence(train_df, test_df=None):
+    """
+    Feature creation that should be done given training data and then merged \
+    with test data.
+    """
+    print('in preprocessing')
+    ATTRIBUTION_CATEGORIES = [
+        # V1 Features #
+        ###############
+        ['ip'], ['app'], ['device'], ['os'], ['channel'],
+
+        # V2 Features #
+        ###############
+        ['app', 'channel'],
+        ['app', 'os'],
+        ['app', 'device'],
+
+        # V3 Features #
+        ###############
+        ['channel', 'os'],
+        ['channel', 'device'],
+        ['os', 'device']
+    ]
+
+    # Find frequency of is_attributed for each unique value in column
+    logging.info("Calculating new features: Confidence rates...")
+    print('Calculating new features: Confidence rates...')
+    for cols in ATTRIBUTION_CATEGORIES:
+        print(cols)
+        # New feature name
+        new_feature = '_'.join(cols) + '_confRate'
+        logging.info(new_feature)
+        
+        # Perform the groupby
+        group_object = train_df.groupby(cols)
+        
+        # Group sizes
+        group_sizes = group_object.size()
+        
+        # Print group size descriptives once
+        if test_df is None:
+            logging.info(
+            "Calculating confidence-weighted rate for: {}.\n   Saving to: {}. \
+            Group Max / Mean / Median / Min: {} / {} / {} / {}".format(
+                cols, new_feature,
+                group_sizes.max(),
+                np.round(group_sizes.mean(), 2),
+                np.round(group_sizes.median(), 2),
+                group_sizes.min()
+            ))
+
+        # Merge function
+        def merge_new_features(group_object, df):
+            df = df.merge(
+            group_object['is_attributed']. \
+                apply(rate_calculation). \
+                reset_index(). \
+                rename(
+                index=str,
+                columns={'is_attributed': new_feature}
+            )[cols + [new_feature]],
+            on=cols, how='left'
+            )
+                
+            # Replace NaNs by average of column
+            df = df.fillna(df.mean())
+            
+            return df
+            
+        # Perform the merge
+        if test_df is None:
+            train_df = merge_new_features(group_object, train_df)
+        elif test_df is not None:
+            test_df = merge_new_features(group_object, test_df)
+            
+    # Return the relevant data frame
+    if test_df is None:
+        return train_df
+    elif test_df is not None:
+        return test_df
 
 def open_dispatching(filename, use_tensorflow=False, **kwargs):
     if filename.startswith('gs://') or use_tensorflow:
