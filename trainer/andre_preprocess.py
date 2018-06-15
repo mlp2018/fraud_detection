@@ -308,7 +308,7 @@ def plotip(df):
 def plotattr(df):
     sns.distplot(df["is_attributed"] , color="skyblue")
     plt.savefig('histogram3.png', dpi = 300)
-    
+    plt.close()
 
 plotip(train_df)
 plotattr(train_df)
