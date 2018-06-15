@@ -19,7 +19,6 @@ from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from IPython.display import clear_output'''
 
-#from cross_validation import stratified_kfold, cross_val_score
 import trainer.preprocessing as pp
 from tensorflow.python.lib.io import file_io
 
@@ -93,10 +92,6 @@ def NN(train_df, val_df, test_df, sub_path):
     """
     logging.info('Neural Network preprocessing')
     
-    '''if val_df is None:
-        val_df = train_df[len(train_df)-10000:len(train_df)]
-        train_df = train_df[0:len(train_df)-10000]'''
-    
     if train_df is not None: 
         y_train = train_df['is_attributed'].values
         train_df = train_df.drop('is_attributed', axis = 1)
@@ -146,7 +141,7 @@ def NN(train_df, val_df, test_df, sub_path):
         model = Model(inputs=[var for var in in_var], outputs=outp)
         
         logging.info('Model is compiling...')
-        #parameters 
+        
         batch_size = 50000
         epochs = 2 #12 for sample_train
         exp_decay = lambda init, fin, steps: (init/fin)**(1/(steps-1)) - 1
@@ -162,14 +157,6 @@ def NN(train_df, val_df, test_df, sub_path):
         
         model.fit(train_df, y_train, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=0.1)
         del train_df, y_train; gc.collect()
-        '''model.save_weights('model_NN.h5')
-        with file_io.FileIO('model_NN.h5', mode='r') as input_f:
-            with file_io.FileIO('gs://bag_of_students/NN/model_NN.h5', mode='w+') as output_f:
-                output_f.write(input_f.read())
-                print("Saved model_NN.h5 to GCS")'''
-    
-        #from keras.models import load_weights
-        #model.load_weights('C:/Users/Pauline/Documents/GitHub/fraud_detection/trainer/NN_model_NN.h5')
     
     if val_df is not None:
         logging.info('Prediction on validation set')
@@ -178,8 +165,6 @@ def NN(train_df, val_df, test_df, sub_path):
         predictions_NN_prob = predictions_NN_prob[:,0]
         
         predictions_NN = np.where(predictions_NN_prob > 0.5, 1, 0)
-        
-        #print accuracy
         acc_NN = accuracy_score(y_val, predictions_NN)
         print('Overall accuracy of Neural Network model:', acc_NN)
     
@@ -193,7 +178,7 @@ def NN(train_df, val_df, test_df, sub_path):
         sub['is_attributed'] = model.predict(test_df, batch_size=batch_size, verbose=2)
         del test_df; gc.collect()
         logging.info("Writing....")
-        with file_io.FileIO(sub_path, mode='wb') as fout: #gs://bag_of_students/NN/
+        with file_io.FileIO(sub_path, mode='wb') as fout:
             sub.to_csv(fout,index=False)
         logging.info("Done...")
         logging.info(sub.info())
@@ -215,7 +200,8 @@ def main():
     # Load the test data set, i.e. data for which we need to make predictions.
     test_df = pp.load_test(args.test_file) if args.test_file is not None \
         else None
-        
+
+    # Where the submission file has to be saved
     path_sub_file = args.sub_file
     
     NN(train_df, val_df, test_df, path_sub_file)
