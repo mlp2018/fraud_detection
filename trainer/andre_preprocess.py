@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set() #make the plots look pretty
 
-path = '~/Documents/fraud_detection/trainer/data/'
+path = '/scratch/avargasgalvez/'
 
 dtypes = {
         'ip'            : 'uint32',
@@ -38,7 +38,7 @@ dtypes = {
 
 print('load train...')
 train_cols = ['ip','app','device','os', 'channel', 'click_time', 'is_attributed']
-train_df = pd.read_csv(path+"train_small_10.csv", dtype=dtypes, usecols=train_cols)
+train_df = pd.read_csv(path+"train.csv", dtype=dtypes, usecols=train_cols)
 
 import gc
 
