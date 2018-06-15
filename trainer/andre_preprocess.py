@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set() #make the plots look pretty
 
-path = '/scratch/avargasgalvez/'
+path = '~/Documents/fraud_detection/trainer/data/'
 
 dtypes = {
         'ip'            : 'uint32',
@@ -38,7 +38,7 @@ dtypes = {
 
 print('load train...')
 train_cols = ['ip','app','device','os', 'channel', 'click_time', 'is_attributed']
-train_df = pd.read_csv(path+"train.csv", dtype=dtypes, usecols=train_cols)
+train_df = pd.read_csv(path+"train_small_10.csv", dtype=dtypes, usecols=train_cols)
 
 import gc
 
@@ -248,8 +248,35 @@ def correlation_matrix(df):
 
 #correlation_matrix(train_df)
 #plot data
-plt =train_df.hist()
-plt.savefig('boxplot.png')
+
+def histo(df):
+    df.hist()
+    plt.title('Mean')
+    plt.xlabel("Features")
+    plt.ylabel("Frequency")
+    return plt.savefig("histogram.png")
+def histo2(df):
+    plt.hist(df, stack = False)
+    plt.title('Mean')
+    plt.xlabel("Features")
+    plt.ylabel("Frequency")
+    return plt.savefig("histogram.png")
+
+def draw_histograms(df, variables, n_rows, n_cols):
+    fig=plt.figure()
+    for i, var_name in enumerate(variables):
+        ax=fig.add_subplot(n_rows,n_cols,i+1)
+        df[var_name].hist(ax=ax)
+        ax.set_title(var_name+" Distribution")
+    fig.tight_layout()  # Improves appearance a bit.
+    plt.ioff()  
+    plt.savefig("histogram.png")
+    plt.close()  
+
+draw_histograms(train_df, train_df.columns,3,3)
+
+
+#histo2(train_df)
 #plot data against predictor 
 #train_df.groupby('is_attributed').hour.value_counts().unstack(0).plot.barh()
 #train_df.groupby('is_attributed').os.value_counts().unstack(0).plot.barh()
