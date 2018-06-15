@@ -248,8 +248,7 @@ def correlation_matrix(df):
 
 #correlation_matrix(train_df)
 #plot data
-plt = train_df.boxplot()
-train_df.hist()
+plt =train_df.hist()
 plt.savefig('boxplot.png')
 #plot data against predictor 
 #train_df.groupby('is_attributed').hour.value_counts().unstack(0).plot.barh()
