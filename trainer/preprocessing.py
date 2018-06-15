@@ -63,7 +63,6 @@ def _preprocess_common(df):
     
     # Get hour and day from clicktime        
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype('uint8')
-    df_write['hour'] = df['hour']
     df['day'] = pd.to_datetime(df.click_time).dt.day.astype('uint8')
     df.drop(['click_time'], axis=1, inplace=True)
     gc.collect()
