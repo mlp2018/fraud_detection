@@ -137,25 +137,43 @@ def main():
 
     logging.info('Preprocessing...')
 
+# =============================================================================
+#     # Load the training data, i.e. "the 90%"
+#     train_df = pp.load_train(args.train_file, int(args.number_lines)
+#         if args.number_lines is not None else None)
+#     train_df = pp.preprocess_confidence(train_df)
+# 
+#     # Load the validation data, i.e. "the 10%"
+#     if args.valid_file is not None:
+#         valid_df = pp.load_train(args.valid_file)
+#         valid_df = pp.preprocess_confidence(train_df, valid_df)
+#     else:
+#         valid_df = None
+# 
+#     # Load the test data set, i.e. the data for which we need to make predictions
+#     if args.test_file is not None:
+#         test_df = pp.load_test(args.test_file)
+#         test_df = pp.preprocess_confidence(train_df, test_df)
+#     else:
+#         test_df = None
+# =============================================================================
+
     # Load the training data, i.e. "the 90%"
-    train_df = pp.load_train(args.train_file, int(args.number_lines)
-        if args.number_lines is not None else None)
-    train_df = pp.preprocess_confidence(train_df)
-
-    # Load the validation data, i.e. "the 10%"
-    if args.valid_file is not None:
-        valid_df = pp.load_train(args.valid_file)
-        valid_df = pp.preprocess_confidence(train_df, valid_df)
+    if args.number_lines:
+        train_df = pp.load_train_raw(args.train_file, int(args.number_lines))
     else:
-        valid_df = None
-
-    # Load the test data set, i.e. the data for which we need to make predictions
-    if args.test_file is not None:
-        test_df = pp.load_test(args.test_file)
-        test_df = pp.preprocess_confidence(train_df, test_df)
-    else:
-        test_df = None
-
+        train_df = pp.load_train_raw(args.train_file)
+    
+    test_df = pp.load_test_raw(args.test_file)
+    
+    # Use the last 10% of the training data as validation data
+    percent_valid = int(2/187 * len(train_df)) # We're using 2/187 because Sophie used 2 million lines
+    # of training data as validation data when training earlier models
+    valid_df = train_df[-percent_valid:]
+    train_df = train_df[:-percent_valid]
+    
+    print(valid_df.columns)
+ 
     # Column we're trying to predict
     target = 'is_attributed'
 

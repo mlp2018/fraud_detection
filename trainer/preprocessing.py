@@ -35,17 +35,22 @@ DTYPES = {
 
 
 # Columns our predictions are based on
-predictors = ['app', 'device', 'channel', 'hour_sq',
-              'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
-              'count_ip_hour_device', 'ip_confRate', 'app_confRate',
-              'device_confRate', 'os_confRate', 'channel_confRate',
-              'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
-              'channel_os_confRate', 'channel_device_confRate', 
-              'os_device_confRate']
-categorical = ['app', 'device', 'channel', 'hour_sq',
-               'count_ip_day_hour', 'count_ip_hour_os', 
-               'count_ip_hh_app', 'count_ip_hour_device']
+predictors = ['ip', 'app', 'device', 'os', 'channel']
+categorical = ['ip', 'app', 'device', 'os', 'channel']
 
+# =============================================================================
+# predictors = ['app', 'device', 'channel', 'hour_sq',
+#               'count_ip_day_hour', 'count_ip_hour_os', 'count_ip_hh_app', 
+#               'count_ip_hour_device', 'ip_confRate', 'app_confRate',
+#               'device_confRate', 'os_confRate', 'channel_confRate',
+#               'app_channel_confRate', 'app_os_confRate', 'app_device_confRate',
+#               'channel_os_confRate', 'channel_device_confRate', 
+#               'os_device_confRate']
+# categorical = ['app', 'device', 'channel', 'hour_sq',
+#                'count_ip_day_hour', 'count_ip_hour_os', 
+#                'count_ip_hh_app', 'count_ip_hour_device']
+# 
+# =============================================================================
 
 def reformat_click_time(df):
     df['hour'] = pd.to_datetime(df.click_time).dt.hour.astype(
@@ -231,7 +236,7 @@ def correlation_matrix(df):
     plt.show()
 
 
-def load_train_raw(filename, number_samples):
+def load_train_raw(filename, number_samples=None):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'is_attributed']
     logging.info('Loading labeled data from {!r}...'.format(filename))
@@ -240,7 +245,7 @@ def load_train_raw(filename, number_samples):
                            nrows=number_samples)
 
 
-def load_test_raw(filename, number_samples):
+def load_test_raw(filename, number_samples=None):
     columns = ['ip','app','device','os', 'channel', 'click_time',
                'click_id']
     logging.info('Loading unlabeled data from {!r}...'.format(filename))
