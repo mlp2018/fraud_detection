@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set() #make the plots look pretty
 
-path = '/scratch/avargasgalvez/'
+path = '~/Documents/fraud_detection/trainer/data/'
 
 dtypes = {
         'ip'            : 'uint32',
@@ -232,12 +232,12 @@ def preprocess_confidence(train_df, test_df=None):
 
 print( "Train info before: ")
 print( train_df.info() )
-train_df = prep_data( train_df )
-train_df = preprocess_confidence (train_df)
-gc.collect()
-print("vars and data type: ")
-train_df.info()
-train_df.describe()
+#train_df = prep_data( train_df )
+#train_df = preprocess_confidence (train_df)
+#gc.collect()
+#print("vars and data type: ")
+#train_df.info()
+#train_df.describe()
 
 def correlation_matrix(df):
     corr = df.corr()
@@ -246,10 +246,11 @@ def correlation_matrix(df):
             yticklabels=corr.columns.values)
     plt.savefig('corr-matrix.png')
 
-correlation_matrix(train_df)
+#correlation_matrix(train_df)
 #plot data
-train_df.boxplot()
+plt = train_df.boxplot()
 train_df.hist()
+plt.savefig('boxplot.png')
 #plot data against predictor 
 #train_df.groupby('is_attributed').hour.value_counts().unstack(0).plot.barh()
 #train_df.groupby('is_attributed').os.value_counts().unstack(0).plot.barh()
@@ -257,6 +258,5 @@ train_df.hist()
 #train_df.groupby('is_attributed').device.value_counts().unstack(0).plot.barh()
 #train_df.groupby('is_attributed').app.value_counts().unstack(0).plot.barh()
 
-print(train_df.head(n=15))
-
+#print(train_df.head(n=15))
 
