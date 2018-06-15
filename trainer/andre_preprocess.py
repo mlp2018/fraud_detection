@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set() #make the plots look pretty
 
-path = '/scratch/avargasgalvez/'
+path = '~/Documents/fraud_detection/trainer/data/'
 
 dtypes = {
         'ip'            : 'uint32',
@@ -38,7 +38,7 @@ dtypes = {
 
 print('load train...')
 train_cols = ['ip','app','device','os', 'channel', 'click_time', 'is_attributed']
-train_df = pd.read_csv(path+"train.csv", dtype=dtypes, usecols=train_cols)
+train_df = pd.read_csv(path+"train_small_10.csv", dtype=dtypes, usecols=train_cols)
 
 import gc
 
@@ -251,29 +251,68 @@ def correlation_matrix(df):
 
 def histo(df):
     df.hist()
-    plt.title('Mean')
+    plt.title('Histograms')
     plt.xlabel("Features")
     plt.ylabel("Frequency")
-    return plt.savefig("histogram.png")
+    plt.ioff()
+    plt.savefig("histogram.png")
+    plt.close()
 def histo2(df):
-    plt.hist(df, stack = False)
+    plt.hist(df, stack = False, bins = "auto")
     plt.title('Mean')
     plt.xlabel("Features")
     plt.ylabel("Frequency")
-    return plt.savefig("histogram.png")
+    plt.ioff()
+    plt.savefig("histogram.png")
+    plt.close()
 
 def draw_histograms(df, variables, n_rows, n_cols):
     fig=plt.figure()
     for i, var_name in enumerate(variables):
         ax=fig.add_subplot(n_rows,n_cols,i+1)
-        df[var_name].hist(ax=ax)
+        df[var_name].hist(bins=10,ax=ax)
         ax.set_title(var_name+" Distribution")
     fig.tight_layout()  # Improves appearance a bit.
     plt.ioff()  
     plt.savefig("histogram.png")
     plt.close()  
+    
+# Import library and dataset
+ 
+# Method 1: on the same Axis
+#sns.distplot( df["ip"] , color="skyblue", label="ip")
+#sns.distplot( df["os"] , color="red", label="os")
+#plt.legend()
+ 
+#sns.plt.show()
+# plot
+def snsplot(df):
+    f, axes = plt.subplots(2, 2, figsize=(15, 15), sharex=True)
+    g = sns.distplot( df["os"] , color="olive", ax=axes[0, 0])
+    g.set_xlim(0,300)
+    sns.distplot( df["app"] , color="gold", ax=axes[0, 1])
+    sns.distplot( df["device"] , color="teal", ax=axes[1, 1])
+    sns.distplot( df["channel"] , color="teal", ax=axes[1, 0])
+#sns.distplot( df["click_time"] , color="teal", ax=axes[2, 1])
+    plt.savefig('histogram.png', dpi = 300)
+    plt.clf()
+    
+snsplot(train_df)
 
-draw_histograms(train_df, train_df.columns,3,3)
+def plotip(df):
+    sns.distplot(df["ip"], color="skyblue")
+#sns.distplot( df["click_time"] , color="teal", ax=axes[2, 1])
+    plt.savefig('histogram2.png', dpi = 300)
+    plt.clf()
+    
+def plotattr(df):
+    sns.distplot(df["is_attributed"] , color="skyblue")
+    plt.savefig('histogram3.png', dpi = 300)
+    
+
+plotip(train_df)
+plotattr(train_df)
+#draw_histograms(train_df, train_df.columns,3,3)
 
 
 #histo2(train_df)
