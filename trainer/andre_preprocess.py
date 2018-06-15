@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set() #make the plots look pretty
 
-path = '~/Documents/fraud_detection/trainer/data/'
+path = '/scratch/avargasgalvez/'
 
 dtypes = {
         'ip'            : 'uint32',
